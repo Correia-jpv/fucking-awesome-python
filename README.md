@@ -1336,6 +1336,7 @@ Where to discover learning resources or new Python libraries.
     * <b><code>&nbsp;&nbsp;3722⭐</code></b> <b><code>&nbsp;&nbsp;&nbsp;373🍴</code></b> [Ultimate Python study guide](https://github.com/huangsam/ultimate-python))
 * Libraries
     * 🌎 [Awesome Python @LibHunt](python.libhunt.com/)
+    * 🌎 [Explore Python @kandi](https://kandi.openweaver.com/explore/python) - Discover & find a curated list of popular & new libraries, top authors, trending project kits, discussions, tutorials & learning resources on kandi.
 * Others
     * 🌎 [Python ZEEF](python.zeef.com/alan.richmond)
     * 🌎 [Pythonic News](news.python.sc/)
