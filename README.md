@@ -229,7 +229,7 @@ _Traditional full stack web frameworks. Also see [Web APIs](#web-apis)._
 - Synchronous
   - [bottle](https://github.com/bottlepy/bottle) - A fast and simple micro-framework distributed as a single file with no dependencies.
   - [django](https://github.com/django/django) - The most popular web framework in Python.
-    - [awesome-django](https://github.com/shahraizali/awesome-django)
+    - [awesome-django](https://github.com/wsvincent/awesome-django)
   - [flask](https://github.com/pallets/flask) - A microframework for Python.
     - [awesome-flask](https://github.com/humiaozuzu/awesome-flask)
   - [pyramid](https://github.com/Pylons/pyramid) - A small, fast, down-to-earth, open source Python web framework.
