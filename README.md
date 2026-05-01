@@ -620,7 +620,7 @@ _Tools of static analysis, linters and code quality checkers. Also see [awesome-
 
 ## Testing
 
-_Libraries for testing codebases and generating test data._
+_Libraries for testing codebases and generating test data. Also see [awesome-python-testing](https://github.com/cleder/awesome-python-testing)._
 
 - Frameworks
   - [hypothesis](https://github.com/HypothesisWorks/hypothesis) - Hypothesis is an advanced Quickcheck style property based testing library.
