@@ -3,6 +3,9 @@
 import json
 import shutil
 import textwrap
+import xml.etree.ElementTree as ET
+from datetime import UTC, date, datetime
+from html.parser import HTMLParser
 from pathlib import Path
 
 from build import (
@@ -14,6 +17,40 @@ from build import (
     sort_entries,
 )
 from readme_parser import parse_readme, slugify
+
+
+class HeadMetadataParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.title_count = 0
+        self.title = ""
+        self.meta_by_name = {}
+        self.meta_by_property = {}
+        self.links_by_rel = {}
+        self._in_title = False
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "title":
+            self.title_count += 1
+            self._in_title = True
+        elif tag == "meta":
+            if "name" in attrs:
+                self.meta_by_name[attrs["name"]] = attrs.get("content", "")
+            if "property" in attrs:
+                self.meta_by_property[attrs["property"]] = attrs.get("content", "")
+        elif tag == "link" and attrs.get("rel"):
+            for rel in attrs["rel"].split():
+                self.links_by_rel[rel] = attrs.get("href", "")
+
+    def handle_endtag(self, tag):
+        if tag == "title":
+            self._in_title = False
+
+    def handle_data(self, data):
+        if self._in_title:
+            self.title += data
+
 
 # ---------------------------------------------------------------------------
 # slugify
@@ -72,6 +109,11 @@ class TestBuild:
             encoding="utf-8",
         )
 
+    def _copy_real_templates(self, tmp_path):
+        real_tpl = Path(__file__).parent / ".." / "templates"
+        tpl_dir = tmp_path / "website" / "templates"
+        shutil.copytree(real_tpl, tpl_dir)
+
     def test_build_creates_single_page(self, tmp_path):
         readme = textwrap.dedent("""\
             # Awesome Python
@@ -113,6 +155,97 @@ class TestBuild:
         assert (site / "index.html").exists()
         # No category sub-pages
         assert not (site / "categories").exists()
+
+    def test_build_creates_root_discovery_files(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # Awesome Python
+
+            Intro.
+
+            ---
+
+            ## Widgets
+
+            - [w1](https://example.com) - A widget.
+
+            # Contributing
+
+            Help!
+        """)
+        self._make_repo(tmp_path, readme)
+        start_date = datetime.now(UTC).date()
+        build(tmp_path)
+        end_date = datetime.now(UTC).date()
+
+        site = tmp_path / "website" / "output"
+        robots = (site / "robots.txt").read_text(encoding="utf-8")
+        assert robots == (
+            "User-agent: *\n"
+            "Content-Signal: search=yes, ai-input=yes, ai-train=yes\n"
+            "Allow: /\n"
+            "\n"
+            "Sitemap: https://awesome-python.com/sitemap.xml\n"
+        )
+
+        sitemap = ET.parse(site / "sitemap.xml")
+        root = sitemap.getroot()
+        ns = {"sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        locs = [loc.text for loc in root.findall("sitemap:url/sitemap:loc", ns)]
+        lastmods = [lastmod.text for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
+
+        assert root.tag == "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset"
+        assert locs == ["https://awesome-python.com/"]
+        assert len(lastmods) == 1
+        assert start_date <= date.fromisoformat(lastmods[0]) <= end_date
+        assert all(loc.startswith("https://awesome-python.com/") for loc in locs)
+        assert all("?" not in loc for loc in locs)
+
+    def test_build_creates_markdown_alternate_without_sponsors(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # Awesome Python
+
+            Intro.
+
+            # **Sponsors**
+
+            - **[Sponsor](https://sponsor.example.com)**: Sponsored tool.
+
+            > Become a sponsor: [Sponsor us](SPONSORSHIP.md).
+
+            # Categories
+
+            **Tools**
+
+            - [Widgets](#widgets)
+
+            ---
+
+            ## Widgets
+
+            - [w1](https://example.com) - A widget.
+
+            # Contributing
+
+            Help!
+        """)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+        index_md = (site / "index.md").read_text(encoding="utf-8")
+        llms_txt = (site / "llms.txt").read_text(encoding="utf-8")
+
+        assert '<link rel="alternate" type="text/markdown" href="/index.md" />' in index_html
+        assert index_md == llms_txt
+        assert index_md.startswith("# Awesome Python\n\nIntro.\n\n# Categories")
+        assert "# **Sponsors**" not in index_md
+        assert "Sponsor" not in index_md
+        assert "SPONSORSHIP.md" not in index_md
+        assert "## Widgets" in index_md
+        assert "- [w1](https://example.com) - A widget." in index_md
 
     def test_build_cleans_stale_output(self, tmp_path):
         readme = textwrap.dedent("""\
@@ -234,6 +367,40 @@ class TestBuild:
         assert "100" in html
         # Expand content present
         assert "expand-content" in html
+
+    def test_index_contains_aligned_homepage_metadata(self, tmp_path):
+        readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+
+        build(tmp_path)
+
+        parsed_groups = parse_readme(readme)
+        categories = [cat for group in parsed_groups for cat in group["categories"]]
+        entries = extract_entries(categories, parsed_groups)
+        html = (tmp_path / "website" / "output" / "index.html").read_text(encoding="utf-8")
+        parser = HeadMetadataParser()
+        parser.feed(html)
+
+        expected_title = "Awesome Python"
+        expected_description = f"An opinionated guide to the best Python frameworks, libraries, and tools. Explore {len(entries)} curated projects across {len(categories)} categories, from AI and agents to data science and web development."
+        expected_url = "https://awesome-python.com/"
+        expected_image = "https://awesome-python.com/static/og-image.png"
+
+        assert parser.title_count == 1
+        assert parser.title.strip() == expected_title
+        assert parser.meta_by_name["description"] == expected_description
+        assert parser.links_by_rel["canonical"] == expected_url
+        assert parser.meta_by_property["og:type"] == "website"
+        assert parser.meta_by_property["og:title"] == expected_title
+        assert parser.meta_by_property["og:description"] == expected_description
+        assert parser.meta_by_property["og:image"] == expected_image
+        assert parser.meta_by_property["og:url"] == expected_url
+        assert parser.meta_by_name["twitter:card"] == "summary_large_image"
+        assert parser.meta_by_name["twitter:title"] == expected_title
+        assert parser.meta_by_name["twitter:description"] == expected_description
+        assert parser.meta_by_name["twitter:image"] == expected_image
+        assert "<head>\n    <meta charset" in html
 
 
 # ---------------------------------------------------------------------------
