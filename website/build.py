@@ -14,6 +14,8 @@ from jinja2 import Environment, FileSystemLoader
 from readme_parser import ParsedGroup, ParsedSection, parse_readme, parse_sponsors
 
 GITHUB_REPO_URL_RE = re.compile(r"^https?://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
+MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)\s]+)\)")
+BULLET_LINE_RE = re.compile(r"^\s*-\s")
 SITE_URL = "https://awesome-python.com/"
 SITEMAP_URL = f"{SITE_URL}sitemap.xml"
 SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -102,6 +104,72 @@ def top_level_heading_text(line: str) -> str | None:
     if not stripped.startswith("# "):
         return None
     return stripped.removeprefix("#").strip().strip("#").strip().strip("*").strip()
+
+
+LLMS_CATEGORIES_PLACEHOLDER = "{{ categories_md }}"
+
+
+def extract_categories_body(markdown: str) -> str:
+    """Return content under the `# Categories` heading, excluding the heading line itself."""
+    lines = markdown.splitlines(keepends=True)
+    start_idx = None
+    end_idx = len(lines)
+    for i, line in enumerate(lines):
+        heading = top_level_heading_text(line)
+        if heading is None:
+            continue
+        if start_idx is None and heading.lower() == "categories":
+            start_idx = i + 1
+            while start_idx < len(lines) and lines[start_idx].strip() == "":
+                start_idx += 1
+        elif start_idx is not None and i >= start_idx:
+            end_idx = i
+            break
+    if start_idx is None:
+        return ""
+    return "".join(lines[start_idx:end_idx]).rstrip() + "\n"
+
+
+def build_llms_txt(template_text: str, readme_text: str, stars_data: dict[str, dict]) -> str:
+    """Render the llms.txt template by injecting the README's Categories body, then annotate stars."""
+    body = extract_categories_body(readme_text).rstrip()
+    rendered = template_text.replace(LLMS_CATEGORIES_PLACEHOLDER, body)
+    return annotate_entries_with_stars(rendered, stars_data, format_stars=str)
+
+
+def annotate_entries_with_stars(
+    markdown: str,
+    stars_data: dict[str, dict],
+    *,
+    format_stars=None,
+) -> str:
+    """Append the star count to bullet entry lines whose first GitHub link has known star data.
+
+    `format_stars` controls the parenthesized text. Defaults to "{N} GitHub stars".
+    Pass `str` for a bare number.
+    """
+    if format_stars is None:
+        format_stars = lambda n: f"{n} GitHub stars"  # noqa: E731 lambda-assignment
+    lines = markdown.splitlines(keepends=True)
+    out: list[str] = []
+    for line in lines:
+        if not BULLET_LINE_RE.match(line):
+            out.append(line)
+            continue
+        annotated = line
+        for match in MARKDOWN_LINK_RE.finditer(line):
+            repo_key = extract_github_repo(match.group(1))
+            if not repo_key:
+                continue
+            entry = stars_data.get(repo_key)
+            if not entry or "stars" not in entry:
+                continue
+            stripped = line.rstrip("\n")
+            ending = line[len(stripped):]
+            annotated = f"{stripped} ({format_stars(entry['stars'])}){ending}"
+            break
+        out.append(annotated)
+    return "".join(out)
 
 
 def remove_sponsors_section(markdown: str) -> str:
@@ -243,11 +311,15 @@ def build(repo_root: Path) -> None:
     if static_src.exists():
         shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
 
-    markdown_index = remove_sponsors_section(readme_text)
+    markdown_index = annotate_entries_with_stars(
+        remove_sponsors_section(readme_text), stars_data
+    )
+    llms_template = (website / "templates" / "llms.txt").read_text(encoding="utf-8")
+    llms_txt = build_llms_txt(llms_template, readme_text, stars_data)
     (site_dir / "robots.txt").write_text(build_robots_txt(), encoding="utf-8")
     write_sitemap_xml(site_dir / "sitemap.xml", [(SITE_URL, build_date.date().isoformat())])
     (site_dir / "index.md").write_text(markdown_index, encoding="utf-8")
-    (site_dir / "llms.txt").write_text(markdown_index, encoding="utf-8")
+    (site_dir / "llms.txt").write_text(llms_txt, encoding="utf-8")
 
     print(f"Built single page with {len(parsed_groups)} groups, {len(categories)} categories")
     print(f"Total entries: {total_entries}")

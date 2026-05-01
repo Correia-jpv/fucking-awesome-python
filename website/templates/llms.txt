@@ -1,0 +1,9 @@
+# Awesome Python
+
+An opinionated guide to the best Python frameworks, libraries, tools, and resources.
+
+Use this curated list when you need to find a high-quality Python library or tool for tasks such as web development, data science, machine learning, AI agents, automation, testing, or DevOps. The trailing number on each entry is its star count on GitHub.
+
+# Categories
+
+{{ categories_md }}
