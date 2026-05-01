@@ -625,6 +625,7 @@ _Libraries for testing codebases and generating test data. Also see [awesome-pyt
 - Frameworks
   - [hypothesis](https://github.com/HypothesisWorks/hypothesis) - Hypothesis is an advanced Quickcheck style property based testing library.
   - [pytest](https://github.com/pytest-dev/pytest) - A mature full-featured Python testing tool.
+    - [awesome-pytest](https://github.com/augustogoulart/awesome-pytest)
   - [robotframework](https://github.com/robotframework/robotframework) - A generic test automation framework.
   - [scanapi](https://github.com/scanapi/scanapi) - Automated Testing and Documentation for your REST API.
   - [unittest](https://docs.python.org/3/library/unittest.html) - (Python standard library) Unit testing framework.
