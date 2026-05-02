@@ -167,19 +167,39 @@ function applyFilters() {
   updateURL();
 }
 
-function updateURL() {
+const filterUrlsScript = document.getElementById("filter-urls");
+const filterToUrl = filterUrlsScript
+  ? JSON.parse(filterUrlsScript.textContent)
+  : {};
+const urlToFilter = {};
+Object.keys(filterToUrl).forEach(function (k) {
+  urlToFilter[filterToUrl[k]] = k;
+});
+
+const isIndexDocument =
+  location.pathname === "/" || location.pathname === "/index.html";
+
+function isIndexPage() {
+  return isIndexDocument;
+}
+
+function buildQueryString() {
   const params = new URLSearchParams();
   const query = searchInput ? searchInput.value.trim() : "";
   if (query) params.set("q", query);
-  if (activeFilter) {
-    params.set("filter", activeFilter);
-  }
   if (activeSort.col !== "stars" || activeSort.order !== "desc") {
     params.set("sort", activeSort.col);
     params.set("order", activeSort.order);
   }
   const qs = params.toString();
-  history.replaceState(null, "", qs ? "?" + qs : location.pathname);
+  return qs ? "?" + qs : "";
+}
+
+function updateURL() {
+  if (!isIndexPage()) return;
+  const path =
+    activeFilter && filterToUrl[activeFilter] ? filterToUrl[activeFilter] : "/";
+  history.replaceState(null, "", path + buildQueryString());
 }
 
 function getSortValue(row, col) {
@@ -288,8 +308,21 @@ tags.forEach(function (tag) {
   tag.addEventListener("click", function (e) {
     e.preventDefault();
     const value = tag.dataset.value;
-    activeFilter = activeFilter === value ? null : value;
-    applyFilters();
+    const url = tag.dataset.url;
+    if (isIndexPage()) {
+      activeFilter = activeFilter === value ? null : value;
+      if (activeFilter && url) {
+        history.pushState(null, "", url + buildQueryString());
+      } else {
+        history.pushState(null, "", "/" + buildQueryString());
+      }
+      applyFilters();
+    } else if (url) {
+      window.location.href = url;
+    } else {
+      activeFilter = activeFilter === value ? null : value;
+      applyFilters();
+    }
   });
 });
 
@@ -396,19 +429,28 @@ if (backToTop) {
 (function () {
   const params = new URLSearchParams(location.search);
   const q = params.get("q");
-  const filter = params.get("filter");
   const sort = params.get("sort");
   const order = params.get("order");
   if (q && searchInput) searchInput.value = q;
-  if (filter) activeFilter = filter;
   if (
     (sort === "name" || sort === "stars" || sort === "commit-time") &&
     (order === "desc" || order === "asc")
   ) {
     activeSort = { col: sort, order: order };
   }
-  if (q || filter || sort) {
+  if (isIndexPage()) {
+    const matched = urlToFilter[location.pathname];
+    if (matched) activeFilter = matched;
+  }
+  if (q || activeFilter || sort) {
     sortRows();
   }
   updateSortIndicators();
 })();
+
+window.addEventListener("popstate", function () {
+  if (!isIndexPage()) return;
+  const matched = urlToFilter[location.pathname];
+  activeFilter = matched || null;
+  applyFilters();
+});
