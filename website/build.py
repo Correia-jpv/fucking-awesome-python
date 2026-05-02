@@ -381,6 +381,40 @@ def build(repo_root: Path) -> None:
             encoding="utf-8",
         )
 
+    seen_subcats: set[tuple[str, str]] = set()
+    for category in categories:
+        for entry in entries:
+            for sub in entry.get("subcategories", []):
+                if sub["value"].split(" > ", 1)[0] != category["name"]:
+                    continue
+                key = (category["slug"], sub["slug"])
+                if key in seen_subcats:
+                    continue
+                seen_subcats.add(key)
+                sub_entries = [
+                    e for e in entries
+                    if any(s["value"] == sub["value"] for s in e.get("subcategories", []))
+                ]
+                page_dir = categories_dir / category["slug"] / sub["slug"]
+                page_dir.mkdir(parents=True, exist_ok=True)
+                synthetic = {
+                    "name": sub["name"],
+                    "slug": sub["slug"],
+                    "description": "",
+                    "description_html": "",
+                }
+                (page_dir / "index.html").write_text(
+                    tpl_category.render(
+                        category=synthetic,
+                        category_url=subcategory_public_url(category["slug"], sub["slug"]),
+                        entries=sub_entries,
+                        total_categories=len(categories),
+                        page_kind="subcategory",
+                        parent_category=category,
+                    ),
+                    encoding="utf-8",
+                )
+
     static_src = website / "static"
     static_dst = site_dir / "static"
     if static_src.exists():
