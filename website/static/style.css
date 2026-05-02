@@ -462,6 +462,23 @@ kbd {
   text-wrap: balance;
 }
 
+.category-breadcrumb {
+  margin: 0 0 1rem;
+  color: var(--hero-muted);
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+}
+
+.category-breadcrumb a {
+  color: var(--hero-text);
+  text-decoration: underline;
+  text-decoration-color: oklch(100% 0 0 / 0.32);
+  text-underline-offset: 0.2em;
+}
+
+.category-breadcrumb a:hover {
+  text-decoration-color: oklch(100% 0 0 / 0.7);
+}
+
 .category-subtitle {
   max-width: 68ch;
   margin-top: 1.1rem;

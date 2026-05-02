@@ -604,6 +604,10 @@ class TestBuild:
         assert 'href="/categories/web-frameworks/"' in sync
         assert "Web Frameworks" in sync
         assert "<h1>Synchronous</h1>" in sync
+        assert "category-breadcrumb" in sync
+
+        parent = (site / "categories" / "web-frameworks" / "index.html").read_text(encoding="utf-8")
+        assert "category-breadcrumb" not in parent
 
     def test_build_creates_group_pages(self, tmp_path):
         readme = textwrap.dedent("""\
