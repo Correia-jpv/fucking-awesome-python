@@ -27,6 +27,7 @@ class ParsedSection(TypedDict):
     name: str
     slug: str
     description: str  # plain text, links resolved to text
+    description_html: str  # inline HTML, properly escaped
     entries: list[ParsedEntry]
     entry_count: int
 
@@ -113,22 +114,22 @@ def _heading_text(node: SyntaxTreeNode) -> str:
     return ""
 
 
-def _extract_description(nodes: list[SyntaxTreeNode]) -> str:
-    """Extract description from the first paragraph if it's a single <em> block.
+def _extract_description_children(nodes: list[SyntaxTreeNode]) -> list[SyntaxTreeNode]:
+    """Extract description children from the first paragraph if it's a single <em> block.
 
     Pattern: _Libraries for foo._ -> "Libraries for foo."
     """
     if not nodes:
-        return ""
+        return []
     first = nodes[0]
     if first.type != "paragraph":
-        return ""
+        return []
     for child in first.children:
         if child.type == "inline" and len(child.children) == 1:
             em = child.children[0]
             if em.type == "em":
-                return render_inline_text(em.children)
-    return ""
+                return em.children
+    return []
 
 
 # --- Entry extraction --------------------------------------------------------
@@ -258,14 +259,17 @@ def _parse_section_entries(content_nodes: list[SyntaxTreeNode]) -> list[ParsedEn
 
 def _build_section(name: str, body: list[SyntaxTreeNode]) -> ParsedSection:
     """Build a ParsedSection from a heading name and its body nodes."""
-    desc = _extract_description(body)
-    content_nodes = body[1:] if desc else body
+    desc_children = _extract_description_children(body)
+    desc = render_inline_text(desc_children) if desc_children else ""
+    desc_html = render_inline_html(desc_children) if desc_children else ""
+    content_nodes = body[1:] if desc_children else body
     entries = _parse_section_entries(content_nodes)
     entry_count = len(entries) + sum(len(e["also_see"]) for e in entries)
     return ParsedSection(
         name=name,
         slug=slugify(name),
         description=desc,
+        description_html=desc_html,
         entries=entries,
         entry_count=entry_count,
     )

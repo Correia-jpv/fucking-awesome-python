@@ -146,7 +146,7 @@ class TestBuild:
 
             ## Widgets
 
-            _Widget libraries._
+            _Widget libraries. Also see [awesome-widgets](https://example.com/widgets)._
 
             - [w1](https://example.com) - A widget.
 
@@ -235,7 +235,7 @@ class TestBuild:
 
             ## Widgets
 
-            _Widget libraries._
+            _Widget libraries. Also see [awesome-widgets](https://example.com/widgets)._
 
             - [w1](https://example.com/w1) - A widget.
             - [w2](https://github.com/owner/w2) - A starred widget.
@@ -276,12 +276,12 @@ class TestBuild:
         assert 'href="/categories/widgets/"' in index_html
         assert 'data-value="Widgets"' in index_html
         assert parser.title.strip() == "Widgets Python Libraries | Awesome Python"
-        assert parser.meta_by_name["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries."
+        assert parser.meta_by_name["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries. Also see awesome-widgets."
         assert parser.links_by_rel["canonical"] == "https://awesome-python.com/categories/widgets/"
         assert parser.meta_by_property["og:url"] == "https://awesome-python.com/categories/widgets/"
         assert '<link rel="alternate" type="text/markdown" href="/index.md" />' not in category_html
         assert "<h1>Widgets</h1>" in category_html
-        assert "Widget libraries." in category_html
+        assert 'Widget libraries. Also see <a href="https://example.com/widgets" target="_blank" rel="noopener">awesome-widgets</a>.' in category_html
         assert 'href="https://example.com/w1"' in category_html
         assert "A widget." in category_html
         assert 'href="https://github.com/owner/w2"' in category_html

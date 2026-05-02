@@ -423,6 +423,17 @@ kbd {
   text-wrap: pretty;
 }
 
+.category-subtitle a {
+  color: var(--hero-text);
+  text-decoration: underline;
+  text-decoration-color: oklch(100% 0 0 / 0.32);
+  text-underline-offset: 0.2em;
+}
+
+.category-subtitle a:hover {
+  text-decoration-color: oklch(100% 0 0 / 0.7);
+}
+
 .category-results {
   padding-top: clamp(2.5rem, 5vw, 3.75rem);
 }

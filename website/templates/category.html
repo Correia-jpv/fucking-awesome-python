@@ -25,8 +25,8 @@
 
     <div class="category-hero-copy">
       <h1>{{ category.name }}</h1>
-      {% if category.description %}
-      <p class="category-subtitle">{{ category.description }}</p>
+      {% if category.description_html %}
+      <p class="category-subtitle">{{ category.description_html | safe }}</p>
       {% endif %}
     </div>
   </div>

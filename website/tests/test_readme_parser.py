@@ -180,7 +180,9 @@ class TestParseReadmeSections:
         groups = parse_readme(MINIMAL_README)
         cats = groups[0]["categories"]
         assert cats[0]["description"] == "Libraries for alpha stuff."
+        assert cats[0]["description_html"] == "Libraries for alpha stuff."
         assert cats[1]["description"] == "Tools for beta."
+        assert cats[1]["description_html"] == "Tools for beta."
 
     def test_contributing_skipped(self):
         groups = parse_readme(MINIMAL_README)
@@ -216,6 +218,7 @@ class TestParseReadmeSections:
         groups = parse_readme(readme)
         cats = groups[0]["categories"]
         assert cats[0]["description"] == ""
+        assert cats[0]["description_html"] == ""
         assert cats[0]["entries"][0]["name"] == "item"
 
     def test_description_with_link_stripped(self):
@@ -237,6 +240,7 @@ class TestParseReadmeSections:
         groups = parse_readme(readme)
         cats = groups[0]["categories"]
         assert cats[0]["description"] == "Algorithms. Also see awesome-algos."
+        assert cats[0]["description_html"] == 'Algorithms. Also see <a href="https://example.com" target="_blank" rel="noopener">awesome-algos</a>.'
 
 
 class TestParseGroupedReadme:
@@ -481,6 +485,7 @@ class TestParseRealReadme:
         algos = next(c for c in self.cats if c["name"] == "Algorithms and Design Patterns")
         assert "awesome-algorithms" in algos["description"]
         assert "https://" not in algos["description"]
+        assert 'href="https://github.com/tayllan/awesome-algorithms"' in algos["description_html"]
 
     def test_miscellaneous_in_own_group(self):
         misc_group = next((g for g in self.groups if g["name"] == "Miscellaneous"), None)
