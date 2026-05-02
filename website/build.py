@@ -277,6 +277,15 @@ def build(repo_root: Path) -> None:
     sponsors = parse_sponsors(readme_text)
 
     categories = [cat for g in parsed_groups for cat in g["categories"]]
+    cat_slugs = [cat["slug"] for cat in categories]
+    group_slugs = [g["slug"] for g in parsed_groups]
+    all_top_level_slugs = cat_slugs + group_slugs
+    duplicates = {s for s in all_top_level_slugs if all_top_level_slugs.count(s) > 1}
+    if duplicates:
+        raise ValueError(
+            f"slug collision in /categories/ namespace: {sorted(duplicates)}. "
+            "Rename a category or group so their slugs differ."
+        )
     total_entries = sum(c["entry_count"] for c in categories)
     entries = extract_entries(categories, parsed_groups)
     build_date = datetime.now(UTC)

@@ -484,6 +484,27 @@ class TestBuild:
         # Expand content present
         assert "expand-content" in html
 
+    def test_build_fails_when_group_and_category_slug_collide(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Widgets**
+
+            ## Widgets
+
+            - [w1](https://example.com) - W.
+
+            # Contributing
+
+            Done.
+        """)
+        self._make_repo(tmp_path, readme)
+        import pytest
+        with pytest.raises(ValueError, match="slug collision"):
+            build(tmp_path)
+
     def test_index_contains_aligned_homepage_metadata(self, tmp_path):
         readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
         (tmp_path / "README.md").write_text(readme, encoding="utf-8")
