@@ -117,18 +117,25 @@
           </td>
           <td class="col-cat">
             {% for subcat in entry.subcategories %}
-            <button class="tag" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
+            <button class="tag{% if subcat.url == current_path %} active{% endif %}" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
               {{ subcat.name }}
             </button>
             {% endfor %}
-            <button class="tag active" data-value="{{ category.name }}" data-url="/categories/{{ category.slug }}/">
-              {{ category.name }}
-            </button>
+            {% for cat in entry.categories %}
+            <a
+              class="tag{% if category_urls[cat] == current_path %} active{% endif %}"
+              href="{{ category_urls[cat] }}"
+              data-value="{{ cat }}"
+              data-url="{{ category_urls[cat] }}"
+              >{{ cat }}</a
+            >
+            {% endfor %}
             {% if entry.groups %}
+            {% set group_url = "/categories/" ~ (entry.groups[0] | slugify) ~ "/" %}
             <button
-              class="tag tag-group"
+              class="tag tag-group{% if group_url == current_path %} active{% endif %}"
               data-value="{{ entry.groups[0] }}"
-              data-url="/categories/{{ entry.groups[0] | slugify }}/"
+              data-url="{{ group_url }}"
             >
               {{ entry.groups[0] }}
             </button>

@@ -369,6 +369,8 @@ def build(repo_root: Path) -> None:
                 entries=category_entries,
                 total_categories=len(categories),
                 page_kind="category",
+                category_urls=category_urls,
+                current_path=category_path(category),
             ),
             encoding="utf-8",
         )
@@ -390,6 +392,8 @@ def build(repo_root: Path) -> None:
                 entries=group_entries,
                 total_categories=len(categories),
                 page_kind="group",
+                category_urls=category_urls,
+                current_path=group_path(group["slug"]),
             ),
             encoding="utf-8",
         )
@@ -425,6 +429,8 @@ def build(repo_root: Path) -> None:
                         total_categories=len(categories),
                         page_kind="subcategory",
                         parent_category=category,
+                        category_urls=category_urls,
+                        current_path=subcategory_path(category["slug"], sub["slug"]),
                     ),
                     encoding="utf-8",
                 )
