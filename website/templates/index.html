@@ -61,6 +61,21 @@
         {% endif %}
       </div>
     </div>
+
+    <nav class="hero-category-nav" aria-labelledby="hero-category-heading">
+      <div class="hero-category-meta">
+        <h2 id="hero-category-heading">Browse by category</h2>
+      </div>
+      <ul class="hero-category-links">
+        {% for category in categories %}
+        <li>
+          <a class="hero-category-link" href="{{ category_urls[category.name] }}"
+            >{{ category.name }}</a
+          >
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
   </div>
 </header>
 {% endblock %}

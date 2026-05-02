@@ -508,6 +508,8 @@ class TestBuild:
         assert parser.meta_by_name["twitter:description"] == expected_description
         assert parser.meta_by_name["twitter:image"] == expected_image
         assert "<head>\n    <meta charset" in html
+        assert 'id="hero-category-heading">Browse by category</h2>' in html
+        assert 'class="hero-category-link" href="/categories/ai-and-agents/"' in html
 
 
 # ---------------------------------------------------------------------------
