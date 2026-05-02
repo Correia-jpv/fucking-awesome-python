@@ -655,6 +655,35 @@ class TestBuild:
         assert data["AI & ML"] == "/categories/ai-ml/"
         assert data["Machine Learning > Classical"] == "/categories/machine-learning/classical/"
 
+    def test_filter_urls_json_escapes_closing_script_tag(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            ## Sneaky </script><script>x=1</script>
+
+            - [a](https://example.com) - A.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+
+        marker = '<script type="application/json" id="filter-urls">'
+        start = index_html.index(marker) + len(marker)
+        end = index_html.index("</script>", start)
+        block = index_html[start:end]
+        assert "</script>" not in block
+        data = json.loads(block)
+        assert any("Sneaky" in key for key in data)
+
     def test_build_creates_group_pages(self, tmp_path):
         readme = textwrap.dedent("""\
             # T

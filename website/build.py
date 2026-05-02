@@ -92,6 +92,10 @@ def category_public_url(category: ParsedSection) -> str:
     return f"{SITE_URL}categories/{category['slug']}/"
 
 
+def group_path(group_slug: str) -> str:
+    return f"/categories/{group_slug}/"
+
+
 def group_public_url(group_slug: str) -> str:
     return f"{SITE_URL}categories/{group_slug}/"
 
@@ -315,11 +319,9 @@ def build(repo_root: Path) -> None:
     entries = sort_entries(entries)
     category_urls = {cat["name"]: category_path(cat) for cat in categories}
 
-    filter_urls: dict[str, str] = {}
-    for cat in categories:
-        filter_urls[cat["name"]] = category_path(cat)
+    filter_urls: dict[str, str] = dict(category_urls)
     for group in parsed_groups:
-        filter_urls[group["name"]] = f"/categories/{group['slug']}/"
+        filter_urls[group["name"]] = group_path(group["slug"])
     for entry in entries:
         for sub in entry.get("subcategories", []):
             filter_urls[sub["value"]] = sub["url"]
@@ -348,7 +350,7 @@ def build(repo_root: Path) -> None:
             build_date=build_date.strftime("%B %d, %Y"),
             sponsors=sponsors,
             category_urls=category_urls,
-            filter_urls_json=json.dumps(filter_urls, sort_keys=True),
+            filter_urls_json=json.dumps(filter_urls, sort_keys=True, ensure_ascii=False).replace("</", "<\\/"),
         ),
         encoding="utf-8",
     )
