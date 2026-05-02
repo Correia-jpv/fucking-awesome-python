@@ -229,10 +229,13 @@ class TestBuild:
         lastmods = [lastmod.text for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
 
         assert root.tag == "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset"
-        assert "https://awesome-python.com/" in locs
-        assert "https://awesome-python.com/categories/widgets/" in locs
-        assert "https://awesome-python.com/categories/tools/" in locs
-        assert "https://awesome-python.com/categories/widgets/sync/" in locs
+        assert locs == [
+            "https://awesome-python.com/",
+            "https://awesome-python.com/categories/widgets/",
+            "https://awesome-python.com/categories/tools/",
+            "https://awesome-python.com/categories/widgets/sync/",
+        ]
+        assert len(lastmods) == len(locs)
         assert all(start_date <= date.fromisoformat(lastmod) <= end_date for lastmod in lastmods)
         assert all(loc.startswith("https://awesome-python.com/") for loc in locs)
         assert all("?" not in loc for loc in locs)
