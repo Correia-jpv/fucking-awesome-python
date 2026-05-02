@@ -383,9 +383,10 @@ def build(repo_root: Path) -> None:
 
     seen_subcats: set[tuple[str, str]] = set()
     for category in categories:
+        cat_url_prefix = f"/categories/{category['slug']}/"
         for entry in entries:
             for sub in entry.get("subcategories", []):
-                if sub["value"].split(" > ", 1)[0] != category["name"]:
+                if not sub["url"].startswith(cat_url_prefix):
                     continue
                 key = (category["slug"], sub["slug"])
                 if key in seen_subcats:
