@@ -59,6 +59,19 @@ document.querySelectorAll("[data-scroll-to]").forEach(function (link) {
   });
 });
 
+// Land at #library-index without leaving the hash in the URL
+if (window.location.hash === "#library-index") {
+  const target = document.getElementById("library-index");
+  if (target) {
+    target.scrollIntoView();
+  }
+  history.replaceState(
+    null,
+    "",
+    window.location.pathname + window.location.search,
+  );
+}
+
 // Pause hero animations when scrolled out of view
 (function () {
   const hero = document.querySelector(".hero");
