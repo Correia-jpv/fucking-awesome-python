@@ -615,6 +615,46 @@ class TestBuild:
         parent = (site / "categories" / "web-frameworks" / "index.html").read_text(encoding="utf-8")
         assert "category-breadcrumb" not in parent
 
+    def test_index_embeds_filter_urls_json(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - [dl1](https://example.com/dl1) - DL.
+
+            ## Machine Learning
+
+            - Classical
+
+                - [ml1](https://example.com/ml1) - ML.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+
+        marker = '<script type="application/json" id="filter-urls">'
+        assert marker in index_html
+        start = index_html.index(marker) + len(marker)
+        end = index_html.index("</script>", start)
+        data = json.loads(index_html[start:end])
+
+        assert data["Deep Learning"] == "/categories/deep-learning/"
+        assert data["Machine Learning"] == "/categories/machine-learning/"
+        assert data["AI & ML"] == "/categories/ai-ml/"
+        assert data["Machine Learning > Classical"] == "/categories/machine-learning/classical/"
+
     def test_build_creates_group_pages(self, tmp_path):
         readme = textwrap.dedent("""\
             # T

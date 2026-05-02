@@ -315,6 +315,15 @@ def build(repo_root: Path) -> None:
     entries = sort_entries(entries)
     category_urls = {cat["name"]: category_path(cat) for cat in categories}
 
+    filter_urls: dict[str, str] = {}
+    for cat in categories:
+        filter_urls[cat["name"]] = category_path(cat)
+    for group in parsed_groups:
+        filter_urls[group["name"]] = f"/categories/{group['slug']}/"
+    for entry in entries:
+        for sub in entry.get("subcategories", []):
+            filter_urls[sub["value"]] = sub["url"]
+
     env = Environment(
         loader=FileSystemLoader(website / "templates"),
         autoescape=True,
@@ -339,6 +348,7 @@ def build(repo_root: Path) -> None:
             build_date=build_date.strftime("%B %d, %Y"),
             sponsors=sponsors,
             category_urls=category_urls,
+            filter_urls_json=json.dumps(filter_urls, sort_keys=True),
         ),
         encoding="utf-8",
     )
