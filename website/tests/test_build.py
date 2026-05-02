@@ -724,6 +724,37 @@ class TestBuild:
         assert "wf1" in web_dev
         assert "dl1" not in web_dev
 
+    def test_tag_buttons_have_data_url(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - Vision
+
+                - [v1](https://example.com/v1) - Vision lib.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+
+        assert 'data-value="Deep Learning"' in index_html
+        assert 'data-url="/categories/deep-learning/"' in index_html
+        assert 'data-value="AI &amp; ML"' in index_html or 'data-value="AI & ML"' in index_html
+        assert 'data-url="/categories/ai-ml/"' in index_html
+        assert 'data-url="/categories/deep-learning/vision/"' in index_html
+
 
 # ---------------------------------------------------------------------------
 # extract_github_repo

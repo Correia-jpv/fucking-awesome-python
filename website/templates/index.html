@@ -227,7 +227,7 @@
           </td>
           <td class="col-cat">
             {% for subcat in entry.subcategories %}
-            <button class="tag" data-value="{{ subcat.value }}">
+            <button class="tag" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
               {{ subcat.name }}
             </button>
             {% endfor %} {% for cat in entry.categories %}
@@ -235,10 +235,15 @@
               class="tag"
               href="{{ category_urls[cat] }}"
               data-value="{{ cat }}"
+              data-url="{{ category_urls[cat] }}"
               >{{ cat }}</a
             >
             {% endfor %}
-            <button class="tag tag-group" data-value="{{ entry.groups[0] }}">
+            <button
+              class="tag tag-group"
+              data-value="{{ entry.groups[0] }}"
+              data-url="/categories/{{ entry.groups[0] | slugify }}/"
+            >
               {{ entry.groups[0] }}
             </button>
             {% if entry.source_type == 'Built-in' %}

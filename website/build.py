@@ -332,6 +332,7 @@ def build(repo_root: Path) -> None:
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    env.filters["slugify"] = slugify
 
     site_dir = website / "output"
     if site_dir.exists():

@@ -117,15 +117,19 @@
           </td>
           <td class="col-cat">
             {% for subcat in entry.subcategories %}
-            <button class="tag" data-value="{{ subcat.value }}">
+            <button class="tag" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
               {{ subcat.name }}
             </button>
             {% endfor %}
-            <button class="tag active" data-value="{{ category.name }}">
+            <button class="tag active" data-value="{{ category.name }}" data-url="/categories/{{ category.slug }}/">
               {{ category.name }}
             </button>
             {% if entry.groups %}
-            <button class="tag tag-group" data-value="{{ entry.groups[0] }}">
+            <button
+              class="tag tag-group"
+              data-value="{{ entry.groups[0] }}"
+              data-url="/categories/{{ entry.groups[0] | slugify }}/"
+            >
               {{ entry.groups[0] }}
             </button>
             {% endif %}
