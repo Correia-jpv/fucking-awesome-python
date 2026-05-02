@@ -24,6 +24,11 @@
     </nav>
 
     <div class="category-hero-copy">
+      {% if page_kind == "subcategory" and parent_category %}
+      <p class="category-breadcrumb">
+        <a href="/categories/{{ parent_category.slug }}/">{{ parent_category.name }}</a>
+      </p>
+      {% endif %}
       <h1>{{ category.name }}</h1>
       {% if category.description_html %}
       <p class="category-subtitle">{{ category.description_html | safe }}</p>

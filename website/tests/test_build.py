@@ -577,6 +577,34 @@ class TestBuild:
         assert "fastapi" in async_
         assert "django" not in async_
 
+    def test_subcategory_page_shows_breadcrumb(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Web**
+
+            ## Web Frameworks
+
+            - Synchronous
+
+                - [django](https://example.com/django) - Sync.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        sync = (site / "categories" / "web-frameworks" / "synchronous" / "index.html").read_text(encoding="utf-8")
+        assert 'href="/categories/web-frameworks/"' in sync
+        assert "Web Frameworks" in sync
+        assert "<h1>Synchronous</h1>" in sync
+
     def test_build_creates_group_pages(self, tmp_path):
         readme = textwrap.dedent("""\
             # T
