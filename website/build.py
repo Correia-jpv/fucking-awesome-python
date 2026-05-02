@@ -428,9 +428,11 @@ def build(repo_root: Path) -> None:
     llms_txt = build_llms_txt(llms_template, readme_text, stars_data)
     (site_dir / "robots.txt").write_text(build_robots_txt(), encoding="utf-8")
     sitemap_date = build_date.date().isoformat()
-    sitemap_urls = [(SITE_URL, sitemap_date)] + [
-        (category_public_url(category), sitemap_date) for category in categories
-    ]
+    sitemap_urls = [(SITE_URL, sitemap_date)]
+    sitemap_urls.extend((category_public_url(c), sitemap_date) for c in categories)
+    sitemap_urls.extend((group_public_url(g["slug"]), sitemap_date) for g in parsed_groups)
+    for cat_slug, sub_slug in sorted(seen_subcats):
+        sitemap_urls.append((subcategory_public_url(cat_slug, sub_slug), sitemap_date))
     write_sitemap_xml(site_dir / "sitemap.xml", sitemap_urls)
     (site_dir / "index.md").write_text(markdown_index, encoding="utf-8")
     (site_dir / "llms.txt").write_text(llms_txt, encoding="utf-8")
