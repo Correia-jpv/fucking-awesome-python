@@ -542,6 +542,46 @@ class TestBuild:
         assert 'id="hero-category-heading">Browse by category</h2>' in html
         assert 'class="hero-category-link" href="/categories/ai-and-agents/"' in html
 
+    def test_build_creates_group_pages(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - [dl1](https://example.com/dl1) - DL.
+
+            ## Machine Learning
+
+            - [ml1](https://example.com/ml1) - ML.
+
+            **Web Development**
+
+            ## Web Frameworks
+
+            - [wf1](https://example.com/wf1) - WF.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        ai_ml = (site / "categories" / "ai-ml" / "index.html").read_text(encoding="utf-8")
+        web_dev = (site / "categories" / "web-development" / "index.html").read_text(encoding="utf-8")
+
+        assert "dl1" in ai_ml
+        assert "ml1" in ai_ml
+        assert "wf1" not in ai_ml
+        assert "wf1" in web_dev
+        assert "dl1" not in web_dev
+
 
 # ---------------------------------------------------------------------------
 # extract_github_repo

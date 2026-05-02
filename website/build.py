@@ -92,6 +92,10 @@ def category_public_url(category: ParsedSection) -> str:
     return f"{SITE_URL}categories/{category['slug']}/"
 
 
+def group_public_url(group_slug: str) -> str:
+    return f"{SITE_URL}categories/{group_slug}/"
+
+
 def subcategory_path(category_slug: str, subcategory_slug: str) -> str:
     return f"/categories/{category_slug}/{subcategory_slug}/"
 
@@ -351,6 +355,28 @@ def build(repo_root: Path) -> None:
                 category_url=category_public_url(category),
                 entries=category_entries,
                 total_categories=len(categories),
+                page_kind="category",
+            ),
+            encoding="utf-8",
+        )
+
+    for group in parsed_groups:
+        group_entries = [entry for entry in entries if group["name"] in entry["groups"]]
+        page_dir = categories_dir / group["slug"]
+        page_dir.mkdir(parents=True, exist_ok=True)
+        synthetic = {
+            "name": group["name"],
+            "slug": group["slug"],
+            "description": "",
+            "description_html": "",
+        }
+        (page_dir / "index.html").write_text(
+            tpl_category.render(
+                category=synthetic,
+                category_url=group_public_url(group["slug"]),
+                entries=group_entries,
+                total_categories=len(categories),
+                page_kind="group",
             ),
             encoding="utf-8",
         )
