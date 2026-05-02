@@ -8,6 +8,8 @@ from datetime import UTC, date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 
+import pytest
+
 from build import (
     annotate_entries_with_stars,
     build,
@@ -501,7 +503,6 @@ class TestBuild:
             Done.
         """)
         self._make_repo(tmp_path, readme)
-        import pytest
         with pytest.raises(ValueError, match="slug collision"):
             build(tmp_path)
 
