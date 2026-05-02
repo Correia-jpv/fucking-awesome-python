@@ -3,21 +3,24 @@
   <head>
     {% set default_meta_title = "Awesome Python" %}
     {% set default_meta_description = "An opinionated guide to the best Python frameworks, libraries, and tools. Explore " ~ (entries | length) ~ " curated projects across " ~ total_categories ~ " categories, from AI and agents to data science and web development." %}
-    {% set canonical_url = "https://awesome-python.com/" %}
+    {% set default_canonical_url = "https://awesome-python.com/" %}
     {% set social_image_url = "https://awesome-python.com/static/og-image.png" %}
     {% set meta_title %}{% block title %}{{ default_meta_title }}{% endblock %}{% endset %}
     {% set meta_description %}{% block description %}{{ default_meta_description }}{% endblock %}{% endset %}
+    {% set canonical_url %}{% block canonical_url %}{{ default_canonical_url }}{% endblock %}{% endset %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ meta_title | trim }}</title>
     <meta name="description" content="{{ meta_description | trim }}" />
-    <link rel="canonical" href="{{ canonical_url }}" />
+    <link rel="canonical" href="{{ canonical_url | trim }}" />
+    {% block alternate_links %}
     <link rel="alternate" type="text/markdown" href="/index.md" />
+    {% endblock %}
     <meta property="og:type" content="website" />
     <meta property="og:title" content="{{ meta_title | trim }}" />
     <meta property="og:description" content="{{ meta_description | trim }}" />
     <meta property="og:image" content="{{ social_image_url }}" />
-    <meta property="og:url" content="{{ canonical_url }}" />
+    <meta property="og:url" content="{{ canonical_url | trim }}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{ meta_title | trim }}" />
     <meta name="twitter:description" content="{{ meta_description | trim }}" />

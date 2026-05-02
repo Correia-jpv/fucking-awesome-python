@@ -84,6 +84,14 @@ def build_robots_txt() -> str:
     )
 
 
+def category_path(category: ParsedSection) -> str:
+    return f"/categories/{category['slug']}/"
+
+
+def category_public_url(category: ParsedSection) -> str:
+    return f"{SITE_URL}categories/{category['slug']}/"
+
+
 def write_sitemap_xml(path: Path, urls: Sequence[tuple[str, str]]) -> None:
     ET.register_namespace("", SITEMAP_NS)
     urlset = ET.Element(f"{{{SITEMAP_NS}}}urlset")
@@ -278,6 +286,7 @@ def build(repo_root: Path) -> None:
             entry["last_commit_at"] = sd.get("last_commit_at", "")
 
     entries = sort_entries(entries)
+    category_urls = {cat["name"]: category_path(cat) for cat in categories}
 
     env = Environment(
         loader=FileSystemLoader(website / "templates"),
@@ -302,9 +311,26 @@ def build(repo_root: Path) -> None:
             repo_stars=repo_stars,
             build_date=build_date.strftime("%B %d, %Y"),
             sponsors=sponsors,
+            category_urls=category_urls,
         ),
         encoding="utf-8",
     )
+
+    tpl_category = env.get_template("category.html")
+    categories_dir = site_dir / "categories"
+    for category in categories:
+        category_entries = [entry for entry in entries if category["name"] in entry["categories"]]
+        page_dir = categories_dir / category["slug"]
+        page_dir.mkdir(parents=True, exist_ok=True)
+        (page_dir / "index.html").write_text(
+            tpl_category.render(
+                category=category,
+                category_url=category_public_url(category),
+                entries=category_entries,
+                total_categories=len(categories),
+            ),
+            encoding="utf-8",
+        )
 
     static_src = website / "static"
     static_dst = site_dir / "static"
@@ -317,11 +343,15 @@ def build(repo_root: Path) -> None:
     llms_template = (website / "templates" / "llms.txt").read_text(encoding="utf-8")
     llms_txt = build_llms_txt(llms_template, readme_text, stars_data)
     (site_dir / "robots.txt").write_text(build_robots_txt(), encoding="utf-8")
-    write_sitemap_xml(site_dir / "sitemap.xml", [(SITE_URL, build_date.date().isoformat())])
+    sitemap_date = build_date.date().isoformat()
+    sitemap_urls = [(SITE_URL, sitemap_date)] + [
+        (category_public_url(category), sitemap_date) for category in categories
+    ]
+    write_sitemap_xml(site_dir / "sitemap.xml", sitemap_urls)
     (site_dir / "index.md").write_text(markdown_index, encoding="utf-8")
     (site_dir / "llms.txt").write_text(llms_txt, encoding="utf-8")
 
-    print(f"Built single page with {len(parsed_groups)} groups, {len(categories)} categories")
+    print(f"Built site with {len(parsed_groups)} groups, {len(categories)} categories")
     print(f"Total entries: {total_entries}")
     print(f"Output: {site_dir}")
 

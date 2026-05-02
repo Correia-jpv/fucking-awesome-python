@@ -202,6 +202,8 @@ function getSortValue(row, col) {
 }
 
 function sortRows() {
+  if (!tbody) return;
+
   const arr = Array.prototype.slice.call(rows);
   const col = activeSort.col;
   const order = activeSort.order;

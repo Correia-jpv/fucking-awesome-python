@@ -109,6 +109,15 @@ class TestBuild:
             "{% endblock %}",
             encoding="utf-8",
         )
+        (tpl_dir / "category.html").write_text(
+            '{% extends "base.html" %}{% block content %}'
+            "<h1>{{ category.name }}</h1>"
+            "{% for entry in entries %}"
+            '<a href="{{ entry.url }}">{{ entry.name }}</a>'
+            "{% endfor %}"
+            "{% endblock %}",
+            encoding="utf-8",
+        )
         (tpl_dir / "llms.txt").write_text(
             "# Awesome Python\n"
             "\n"
@@ -125,7 +134,7 @@ class TestBuild:
         tpl_dir = tmp_path / "website" / "templates"
         shutil.copytree(real_tpl, tpl_dir)
 
-    def test_build_creates_single_page(self, tmp_path):
+    def test_build_creates_homepage_and_category_pages(self, tmp_path):
         readme = textwrap.dedent("""\
             # Awesome Python
 
@@ -164,8 +173,8 @@ class TestBuild:
 
         site = tmp_path / "website" / "output"
         assert (site / "index.html").exists()
-        # No category sub-pages
-        assert not (site / "categories").exists()
+        assert (site / "categories" / "widgets" / "index.html").exists()
+        assert (site / "categories" / "gadgets" / "index.html").exists()
 
     def test_build_creates_root_discovery_files(self, tmp_path):
         readme = textwrap.dedent("""\
@@ -205,11 +214,80 @@ class TestBuild:
         lastmods = [lastmod.text for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
 
         assert root.tag == "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset"
-        assert locs == ["https://awesome-python.com/"]
-        assert len(lastmods) == 1
-        assert start_date <= date.fromisoformat(lastmods[0]) <= end_date
+        assert locs == [
+            "https://awesome-python.com/",
+            "https://awesome-python.com/categories/widgets/",
+        ]
+        assert len(lastmods) == 2
+        assert all(start_date <= date.fromisoformat(lastmod) <= end_date for lastmod in lastmods)
         assert all(loc.startswith("https://awesome-python.com/") for loc in locs)
         assert all("?" not in loc for loc in locs)
+
+    def test_build_creates_category_pages_with_metadata_and_links(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # Awesome Python
+
+            Intro.
+
+            ---
+
+            **Tools**
+
+            ## Widgets
+
+            _Widget libraries._
+
+            - [w1](https://example.com/w1) - A widget.
+            - [w2](https://github.com/owner/w2) - A starred widget.
+
+            ## Gadgets
+
+            _Gadget tools._
+
+            - [g1](https://example.com/g1) - A gadget.
+
+            # Contributing
+
+            Help!
+        """)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+
+        data_dir = tmp_path / "website" / "data"
+        data_dir.mkdir(parents=True)
+        stars = {
+            "owner/w2": {
+                "stars": 42,
+                "owner": "owner",
+                "last_commit_at": "2026-01-01T00:00:00+00:00",
+                "fetched_at": "2026-01-01T00:00:00+00:00",
+            },
+        }
+        (data_dir / "github_stars.json").write_text(json.dumps(stars), encoding="utf-8")
+
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+        category_html = (site / "categories" / "widgets" / "index.html").read_text(encoding="utf-8")
+        parser = HeadMetadataParser()
+        parser.feed(category_html)
+
+        assert 'href="/categories/widgets/"' in index_html
+        assert 'data-value="Widgets"' in index_html
+        assert parser.title.strip() == "Widgets Python Libraries | Awesome Python"
+        assert parser.meta_by_name["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries."
+        assert parser.links_by_rel["canonical"] == "https://awesome-python.com/categories/widgets/"
+        assert parser.meta_by_property["og:url"] == "https://awesome-python.com/categories/widgets/"
+        assert '<link rel="alternate" type="text/markdown" href="/index.md" />' not in category_html
+        assert "<h1>Widgets</h1>" in category_html
+        assert "Widget libraries." in category_html
+        assert 'href="https://example.com/w1"' in category_html
+        assert "A widget." in category_html
+        assert 'href="https://github.com/owner/w2"' in category_html
+        assert '<table class="table category-table">' in category_html
+        assert "42" in category_html
+        assert "2026-01-01T00:00:00+00:00" in category_html
 
     def test_build_creates_markdown_alternate_without_sponsors(self, tmp_path):
         readme = textwrap.dedent("""\
