@@ -16,6 +16,7 @@ from build import (
     extract_github_repo,
     load_stars,
     sort_entries,
+    subcategory_path,
 )
 from readme_parser import parse_readme, slugify
 
@@ -79,6 +80,14 @@ class TestSlugify:
 
     def test_extra_spaces(self):
         assert slugify("  Date  and  Time  ") == "date-and-time"
+
+
+class TestSubcategoryPath:
+    def test_builds_path(self):
+        assert subcategory_path("web-frameworks", "synchronous") == "/categories/web-frameworks/synchronous/"
+
+    def test_trailing_slash(self):
+        assert subcategory_path("a", "b").endswith("/")
 
 
 # ---------------------------------------------------------------------------

@@ -92,6 +92,14 @@ def category_public_url(category: ParsedSection) -> str:
     return f"{SITE_URL}categories/{category['slug']}/"
 
 
+def subcategory_path(category_slug: str, subcategory_slug: str) -> str:
+    return f"/categories/{category_slug}/{subcategory_slug}/"
+
+
+def subcategory_public_url(category_slug: str, subcategory_slug: str) -> str:
+    return f"{SITE_URL}categories/{category_slug}/{subcategory_slug}/"
+
+
 def write_sitemap_xml(path: Path, urls: Sequence[tuple[str, str]]) -> None:
     ET.register_namespace("", SITEMAP_NS)
     urlset = ET.Element(f"{{{SITEMAP_NS}}}urlset")
