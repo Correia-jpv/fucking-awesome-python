@@ -487,10 +487,10 @@ class TestParseRealReadme:
         assert "https://" not in algos["description"]
         assert 'href="https://github.com/tayllan/awesome-algorithms"' in algos["description_html"]
 
-    def test_miscellaneous_in_own_group(self):
-        misc_group = next((g for g in self.groups if g["name"] == "Miscellaneous"), None)
-        assert misc_group is not None
-        assert any(c["name"] == "Miscellaneous" for c in misc_group["categories"])
+    def test_miscellaneous_category_in_other_group(self):
+        other_group = next((g for g in self.groups if g["name"] == "Other"), None)
+        assert other_group is not None
+        assert any(c["name"] == "Miscellaneous" for c in other_group["categories"])
 
     def test_all_entries_have_nonempty_names(self):
         bad = []

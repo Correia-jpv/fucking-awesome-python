@@ -117,7 +117,7 @@ An opinionated guide to the best Python frameworks, libraries, tools, and resour
 - [Penetration Testing](#penetration-testing)
 - [Web Security](#web-security)
 
-**Miscellaneous**
+**Other**
 
 - [Hardware](#hardware)
 - [Microsoft Windows](#microsoft-windows)
@@ -1098,7 +1098,7 @@ _Libraries for application-layer web security._
 
 - [secure](https://github.com/TypeError/secure) - HTTP security headers for Python web applications with ASGI and WSGI middleware.
 
-**Miscellaneous**
+**Other**
 
 ## Hardware
 
