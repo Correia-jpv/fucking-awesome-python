@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
-from readme_parser import ParsedGroup, ParsedSection, parse_readme, parse_sponsors
+from readme_parser import ParsedGroup, ParsedSection, parse_readme, parse_sponsors, slugify
 
 GITHUB_REPO_URL_RE = re.compile(r"^https?://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)\s]+)\)")
@@ -243,7 +243,13 @@ def extract_entries(
             if subcat:
                 scoped = f"{cat['name']} > {subcat}"
                 if not any(s["value"] == scoped for s in existing["subcategories"]):
-                    existing["subcategories"].append({"name": subcat, "value": scoped})
+                    sub_slug = slugify(subcat)
+                    existing["subcategories"].append({
+                        "name": subcat,
+                        "value": scoped,
+                        "slug": sub_slug,
+                        "url": f"/categories/{cat['slug']}/{sub_slug}/",
+                    })
     return entries
 
 

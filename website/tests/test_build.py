@@ -714,6 +714,36 @@ class TestExtractEntries:
         entries = extract_entries(categories, groups)
         assert entries[0]["source_type"] == "Built-in"
 
+    def test_subcategory_includes_slug_and_url(self):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Tools**
+
+            ## Web Frameworks
+
+            - Synchronous
+
+                - [django](https://example.com/django) - A framework.
+
+            # Contributing
+
+            Done.
+        """)
+        groups = parse_readme(readme)
+        categories = [c for g in groups for c in g["categories"]]
+        entries = extract_entries(categories, groups)
+        assert entries[0]["subcategories"] == [
+            {
+                "name": "Synchronous",
+                "value": "Web Frameworks > Synchronous",
+                "slug": "synchronous",
+                "url": "/categories/web-frameworks/synchronous/",
+            },
+        ]
+
 
 # ---------------------------------------------------------------------------
 # annotate_entries_with_stars
