@@ -43,7 +43,7 @@ Reference points (stay close to these):
 Anti-references (avoid strictly):
 
 - Generic dark developer-tool look. No cyan on near-black, neon gradients, VSCode-palette dashboards, terminal-green monospace branding.
-- Other awesome-* sites. No plain README dumps, bare lists of links, no voice.
+- Other awesome-\* sites. No plain README dumps, bare lists of links, no voice.
 - SaaS marketing pages. No big metric counters, testimonial cards, feature grids, pricing tiers, or "join 10,000+ developers" social proof bands.
 
 Design principles:
@@ -103,13 +103,13 @@ Pairing (do not swap):
 
 Scale:
 
-| Role | Token | Size | Family | Weight | Notes |
-|---|---|---|---|---|---|
-| Hero headline | (literal `clamp`) | `clamp(4.5rem, 11vw, 8.5rem)` | Cormorant Garamond | 600 | Magazine-cover scale, single use on the hero |
-| Body large | `--text-lg` | `1.125rem` | Manrope | 400 | Content-heavy passages |
-| Body | `--text-base` | `1rem` (16px) | Manrope | 400 | Body floor, do not go smaller |
-| Meta / secondary | `--text-sm` | `0.95rem` | Manrope | 400 / 600 | Meta rows, secondary copy |
-| Caption / pill | `--text-xs` | `0.8rem` (12.8px) | Manrope | 600 / 700 | Smallest token, pills, badges, tags, footnotes |
+| Role             | Token             | Size                          | Family             | Weight    | Notes                                          |
+| ---------------- | ----------------- | ----------------------------- | ------------------ | --------- | ---------------------------------------------- |
+| Hero headline    | (literal `clamp`) | `clamp(4.5rem, 11vw, 8.5rem)` | Cormorant Garamond | 600       | Magazine-cover scale, single use on the hero   |
+| Body large       | `--text-lg`       | `1.125rem`                    | Manrope            | 400       | Content-heavy passages                         |
+| Body             | `--text-base`     | `1rem` (16px)                 | Manrope            | 400       | Body floor, do not go smaller                  |
+| Meta / secondary | `--text-sm`       | `0.95rem`                     | Manrope            | 400 / 600 | Meta rows, secondary copy                      |
+| Caption / pill   | `--text-xs`       | `0.8rem` (12.8px)             | Manrope            | 600 / 700 | Smallest token, pills, badges, tags, footnotes |
 
 Hard-won sizing rules (do not relax):
 
@@ -191,7 +191,7 @@ Peer-consistency check (run before shipping any visual change):
 - **Don't** use a `border-left` or `border-right` greater than 1px as an accent stripe.
 - **Don't** use bounce or elastic easing.
 - **Don't** use glassmorphism as default decoration.
-- **Don't** mimic generic dark developer-tool sites, other awesome-* sites, or SaaS marketing pages.
+- **Don't** mimic generic dark developer-tool sites, other awesome-\* sites, or SaaS marketing pages.
 
 ## Narrow-Screen Behavior
 
