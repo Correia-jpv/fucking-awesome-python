@@ -234,7 +234,9 @@ def write_sitemap_xml(path: Path, urls: Sequence[tuple[str, str]]) -> None:
         lastmod_el = ET.SubElement(url_el, f"{{{SITEMAP_NS}}}lastmod")
         lastmod_el.text = lastmod
 
-    ET.ElementTree(urlset).write(path, encoding="utf-8", xml_declaration=True)
+    tree = ET.ElementTree(urlset)
+    ET.indent(tree, space="  ")
+    tree.write(path, encoding="utf-8", xml_declaration=True)
     with path.open("ab") as f:
         f.write(b"\n")
 
