@@ -502,6 +502,15 @@ kbd {
   padding-top: clamp(2.5rem, 5vw, 3.75rem);
 }
 
+.category-results .results-intro {
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+.category-results .results-intro .results-note {
+  justify-self: end;
+}
+
 .category-table .col-name {
   width: min(42rem, 48vw);
   white-space: normal;
