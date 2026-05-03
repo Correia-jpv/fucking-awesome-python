@@ -251,6 +251,14 @@
           </td>
           <td class="col-arrow"><span class="arrow">&rarr;</span></td>
         </tr>
+        {% if entry.description %}
+        <tr class="desc-row" aria-hidden="true" hidden>
+          <td class="col-num"></td>
+          <td colspan="5">
+            <div class="desc-text">{{ entry.description | safe }}</div>
+          </td>
+        </tr>
+        {% endif %}
         <tr class="expand-row" id="expand-{{ loop.index }}">
           <td></td>
           <td colspan="4">

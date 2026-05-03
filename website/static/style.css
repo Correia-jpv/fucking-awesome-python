@@ -788,7 +788,7 @@ kbd {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
-.row:has(+ .desc-row) td {
+.row:has(+ .desc-row:not([hidden])) td {
   border-bottom-color: transparent;
   padding-bottom: 0.35rem;
 }
@@ -978,6 +978,10 @@ th[data-sort].sort-asc::after {
 .row.open + .desc-row + .expand-row,
 .row.open + .expand-row {
   display: table-row;
+}
+
+.desc-row:not([hidden]) + .expand-row .expand-desc {
+  display: none;
 }
 
 .expand-row td {

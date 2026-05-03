@@ -132,6 +132,7 @@ function collapseAll() {
 
 function applyFilters() {
   const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+  const descRowsVisible = !isIndexDocument || activeFilter !== null;
   let visibleCount = 0;
 
   collapseAll();
@@ -159,8 +160,11 @@ function applyFilters() {
     }
 
     if (row.hidden !== !show) row.hidden = !show;
-    if (row._descRow && row._descRow.hidden !== !show) {
-      row._descRow.hidden = !show;
+    if (row._descRow) {
+      const descHidden = !show || !descRowsVisible;
+      if (row._descRow.hidden !== descHidden) {
+        row._descRow.hidden = descHidden;
+      }
     }
 
     if (show) {
