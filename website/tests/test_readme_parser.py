@@ -350,10 +350,7 @@ def _content_nodes(md_text: str) -> list[SyntaxTreeNode]:
 
 class TestParseSectionEntries:
     def test_flat_entries(self):
-        nodes = _content_nodes(
-            "- [django](https://example.com/d) - A web framework.\n"
-            "- [flask](https://example.com/f) - A micro framework.\n"
-        )
+        nodes = _content_nodes("- [django](https://example.com/d) - A web framework.\n- [flask](https://example.com/f) - A micro framework.\n")
         entries = _parse_section_entries(nodes)
         assert len(entries) == 2
         assert entries[0]["name"] == "django"
@@ -370,13 +367,7 @@ class TestParseSectionEntries:
         assert entries[0]["description"] == ""
 
     def test_subcategorized_entries(self):
-        nodes = _content_nodes(
-            "- Algorithms\n"
-            "  - [algos](https://x.com/a) - Algo lib.\n"
-            "  - [sorts](https://x.com/s) - Sort lib.\n"
-            "- Design Patterns\n"
-            "  - [patterns](https://x.com/p) - Pattern lib.\n"
-        )
+        nodes = _content_nodes("- Algorithms\n  - [algos](https://x.com/a) - Algo lib.\n  - [sorts](https://x.com/s) - Sort lib.\n- Design Patterns\n  - [patterns](https://x.com/p) - Pattern lib.\n")
         entries = _parse_section_entries(nodes)
         assert len(entries) == 3
         assert entries[0]["name"] == "algos"
@@ -432,7 +423,7 @@ class TestParseSectionEntries:
         assert cats[0]["entry_count"] == 3
 
     def test_description_html_escapes_xss(self):
-        nodes = _content_nodes('- [lib](https://x.com) - A <script>alert(1)</script> lib.\n')
+        nodes = _content_nodes("- [lib](https://x.com) - A <script>alert(1)</script> lib.\n")
         entries = _parse_section_entries(nodes)
         assert "<script>" not in entries[0]["description"]
         assert "&lt;script&gt;" in entries[0]["description"]

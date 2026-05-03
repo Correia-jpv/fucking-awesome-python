@@ -229,18 +229,22 @@ def _parse_list_entries(
                 if sub_inline:
                     sub_link = _find_child(sub_inline, "link")
                     if sub_link:
-                        also_see.append(AlsoSee(
-                            name=render_inline_text(sub_link.children),
-                            url=_href(sub_link),
-                        ))
+                        also_see.append(
+                            AlsoSee(
+                                name=render_inline_text(sub_link.children),
+                                url=_href(sub_link),
+                            )
+                        )
 
-        entries.append(ParsedEntry(
-            name=name,
-            url=url,
-            description=desc_html,
-            also_see=also_see,
-            subcategory=subcategory,
-        ))
+        entries.append(
+            ParsedEntry(
+                name=name,
+                url=url,
+                description=desc_html,
+                also_see=also_see,
+                subcategory=subcategory,
+            )
+        )
 
     return entries
 
@@ -273,7 +277,6 @@ def _build_section(name: str, body: list[SyntaxTreeNode]) -> ParsedSection:
         entries=entries,
         entry_count=entry_count,
     )
-
 
 
 def _is_bold_marker(node: SyntaxTreeNode) -> str | None:
@@ -321,11 +324,13 @@ def _parse_grouped_sections(
         nonlocal current_group_name, current_group_cats
         if current_group_cats:
             name = current_group_name or "Other"
-            groups.append(ParsedGroup(
-                name=name,
-                slug=slugify(name),
-                categories=list(current_group_cats),
-            ))
+            groups.append(
+                ParsedGroup(
+                    name=name,
+                    slug=slugify(name),
+                    categories=list(current_group_cats),
+                )
+            )
         current_group_name = None
         current_group_cats = []
 

@@ -17,18 +17,12 @@ class TestExtractGithubRepos:
         assert result == {"psf/requests"}
 
     def test_multiple_repos(self):
-        readme = (
-            "* [requests](https://github.com/psf/requests) - HTTP.\n"
-            "* [flask](https://github.com/pallets/flask) - Micro."
-        )
+        readme = "* [requests](https://github.com/psf/requests) - HTTP.\n* [flask](https://github.com/pallets/flask) - Micro."
         result = extract_github_repos(readme)
         assert result == {"psf/requests", "pallets/flask"}
 
     def test_deduplicates(self):
-        readme = (
-            "* [a](https://github.com/org/repo) - A.\n"
-            "* [b](https://github.com/org/repo) - B."
-        )
+        readme = "* [a](https://github.com/org/repo) - A.\n* [b](https://github.com/org/repo) - B."
         result = extract_github_repos(readme)
         assert result == {"org/repo"}
 
