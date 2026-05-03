@@ -118,6 +118,48 @@ def build_robots_txt() -> str:
     return f"User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: {SITEMAP_URL}\n"
 
 
+def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: int) -> dict:
+    description = (
+        "An opinionated guide to the best Python frameworks, libraries, and tools. "
+        f"Explore {len(entries)} curated projects across {total_categories} categories, "
+        "from AI and agents to data science and web development."
+    )
+    website_id = f"{SITE_URL}#website"
+    item_list = {
+        "@type": "ItemList",
+        "numberOfItems": len(entries),
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i,
+                "name": entry["name"],
+                "url": entry["url"],
+            }
+            for i, entry in enumerate(entries, start=1)
+        ],
+    }
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": website_id,
+                "name": "Awesome Python",
+                "url": SITE_URL,
+            },
+            {
+                "@type": "CollectionPage",
+                "@id": f"{SITE_URL}#collectionpage",
+                "name": "Awesome Python",
+                "url": SITE_URL,
+                "description": description,
+                "isPartOf": {"@id": website_id},
+                "mainEntity": item_list,
+            },
+        ],
+    }
+
+
 def category_path(category: ParsedSection) -> str:
     return f"/categories/{category['slug']}/"
 
@@ -378,6 +420,10 @@ def build(repo_root: Path) -> None:
     site_dir.mkdir(parents=True)
 
     filter_urls_json = json.dumps(filter_urls, sort_keys=True, ensure_ascii=False).replace("</", "<\\/")
+    homepage_json_ld = json.dumps(
+        build_homepage_json_ld(entries, len(categories)),
+        ensure_ascii=False,
+    ).replace("</", "<\\/")
 
     tpl_index = env.get_template("index.html")
     (site_dir / "index.html").write_text(
@@ -393,6 +439,7 @@ def build(repo_root: Path) -> None:
             category_urls=category_urls,
             filter_urls=filter_urls,
             filter_urls_json=filter_urls_json,
+            homepage_json_ld=homepage_json_ld,
         ),
         encoding="utf-8",
     )

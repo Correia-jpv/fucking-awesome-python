@@ -471,6 +471,53 @@ class TestBuild:
         assert 'id="hero-category-heading">Browse by category</h2>' in html
         assert 'class="hero-category-link" href="/categories/ai-and-agents/"' in html
 
+    def test_index_contains_homepage_json_ld(self, tmp_path):
+        readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+
+        build(tmp_path)
+
+        parsed_groups = parse_readme(readme)
+        categories = [cat for group in parsed_groups for cat in group["categories"]]
+        entries = extract_entries(categories, parsed_groups)
+        html = (tmp_path / "website" / "output" / "index.html").read_text(encoding="utf-8")
+
+        marker = '<script type="application/ld+json">'
+        assert marker in html
+        start = html.index(marker) + len(marker)
+        end = html.index("</script>", start)
+        block = html[start:end]
+        assert "</script>" not in block
+        data = json.loads(block)
+
+        assert data["@context"] == "https://schema.org"
+        graph = {node["@type"]: node for node in data["@graph"]}
+        assert set(graph) == {"WebSite", "CollectionPage"}
+        assert graph["WebSite"]["url"] == "https://awesome-python.com/"
+        assert graph["WebSite"]["name"] == "Awesome Python"
+
+        collection = graph["CollectionPage"]
+        assert collection["url"] == "https://awesome-python.com/"
+        assert collection["isPartOf"]["@id"] == graph["WebSite"]["@id"]
+        expected_description = f"An opinionated guide to the best Python frameworks, libraries, and tools. Explore {len(entries)} curated projects across {len(categories)} categories, from AI and agents to data science and web development."
+        assert collection["description"] == expected_description
+
+        item_list = collection["mainEntity"]
+        assert item_list["@type"] == "ItemList"
+        assert item_list["numberOfItems"] == len(entries)
+        assert len(item_list["itemListElement"]) == len(entries)
+
+        positions = [item["position"] for item in item_list["itemListElement"]]
+        assert positions == list(range(1, len(entries) + 1))
+        assert all(item["@type"] == "ListItem" for item in item_list["itemListElement"])
+        assert all(item["url"].startswith(("http://", "https://")) for item in item_list["itemListElement"])
+
+        rendered_names = {item["name"] for item in item_list["itemListElement"]}
+        rendered_urls = {item["url"] for item in item_list["itemListElement"]}
+        assert rendered_names == {e["name"] for e in entries}
+        assert rendered_urls == {e["url"] for e in entries}
+
     def test_build_creates_subcategory_pages(self, tmp_path):
         readme = textwrap.dedent("""\
             # T

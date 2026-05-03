@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block extra_head %}
+<script type="application/ld+json">{{ homepage_json_ld | safe }}</script>
+{% endblock %}
 {% block header %}
 <header class="hero">
   <div class="hero-sheen" aria-hidden="true"></div>
