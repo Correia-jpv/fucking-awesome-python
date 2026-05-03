@@ -5,13 +5,14 @@ import json
 import re
 import shutil
 import xml.etree.ElementTree as ET
+from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from jinja2 import Environment, FileSystemLoader
-from readme_parser import ParsedGroup, ParsedSection, parse_readme, parse_sponsors
+from readme_parser import AlsoSee, ParsedGroup, ParsedSection, parse_readme, parse_sponsors, slugify
 
 GITHUB_REPO_URL_RE = re.compile(r"^https?://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)\s]+)\)")
@@ -20,11 +21,50 @@ SITE_URL = "https://awesome-python.com/"
 SITEMAP_URL = f"{SITE_URL}sitemap.xml"
 SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 
+BUILTIN_FILTER = "Built-in"
+BUILTIN_SLUG = "built-in"
+BUILTIN_PATH = f"/categories/{BUILTIN_SLUG}/"
+BUILTIN_PUBLIC_URL = f"{SITE_URL}categories/{BUILTIN_SLUG}/"
+
+SPONSORSHIP_PATH = "/sponsorship/"
+SPONSORSHIP_PUBLIC_URL = f"{SITE_URL}sponsorship/"
+
 SOURCE_TYPE_DOMAINS = {
     "docs.python.org": "Built-in",
     "gitlab.com": "GitLab",
     "bitbucket.org": "Bitbucket",
 }
+
+
+class TemplateSubcategory(TypedDict):
+    name: str
+    value: str
+    slug: str
+    url: str
+
+
+class TemplateEntry(TypedDict):
+    name: str
+    url: str
+    description: str
+    categories: list[str]
+    groups: list[str]
+    subcategories: list[TemplateSubcategory]
+    stars: int | None
+    owner: str | None
+    last_commit_at: str | None
+    source_type: str | None
+    also_see: list[AlsoSee]
+
+
+class SyntheticCategory(TypedDict):
+    name: str
+    slug: str
+    description: str
+    description_html: str
+
+
+TemplateCategory = ParsedSection | SyntheticCategory
 
 
 def detect_source_type(url: str) -> str | None:
@@ -55,13 +95,13 @@ def load_stars(path: Path) -> dict[str, dict]:
     return {}
 
 
-def sort_entries(entries: list[dict]) -> list[dict]:
+def sort_entries(entries: Sequence[TemplateEntry]) -> list[TemplateEntry]:
     """Sort entries by stars descending, then name ascending.
 
     Three tiers: starred entries first, stdlib second, other non-starred last.
     """
 
-    def sort_key(entry: dict) -> tuple[int, int, int, str]:
+    def sort_key(entry: TemplateEntry) -> tuple[int, int, int, str]:
         stars = entry["stars"]
         name = entry["name"].lower()
         if stars is not None:
@@ -75,13 +115,35 @@ def sort_entries(entries: list[dict]) -> list[dict]:
 
 
 def build_robots_txt() -> str:
-    return (
-        "User-agent: *\n"
-        "Content-Signal: search=yes, ai-input=yes, ai-train=yes\n"
-        "Allow: /\n"
-        "\n"
-        f"Sitemap: {SITEMAP_URL}\n"
-    )
+    return f"User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: {SITEMAP_URL}\n"
+
+
+def category_path(category: ParsedSection) -> str:
+    return f"/categories/{category['slug']}/"
+
+
+def category_public_url(category: ParsedSection) -> str:
+    return f"{SITE_URL}categories/{category['slug']}/"
+
+
+def group_path(group_slug: str) -> str:
+    return f"/categories/{group_slug}/"
+
+
+def group_public_url(group_slug: str) -> str:
+    return f"{SITE_URL}categories/{group_slug}/"
+
+
+def subcategory_path(category_slug: str, subcategory_slug: str) -> str:
+    return f"/categories/{category_slug}/{subcategory_slug}/"
+
+
+def subcategory_public_url(category_slug: str, subcategory_slug: str) -> str:
+    return f"{SITE_URL}categories/{category_slug}/{subcategory_slug}/"
+
+
+def synthetic_category(name: str, slug: str) -> SyntheticCategory:
+    return {"name": name, "slug": slug, "description": "", "description_html": ""}
 
 
 def write_sitemap_xml(path: Path, urls: Sequence[tuple[str, str]]) -> None:
@@ -165,7 +227,7 @@ def annotate_entries_with_stars(
             if not entry or "stars" not in entry:
                 continue
             stripped = line.rstrip("\n")
-            ending = line[len(stripped):]
+            ending = line[len(stripped) :]
             annotated = f"{stripped} ({format_stars(entry['stars'])}){ending}"
             break
         out.append(annotated)
@@ -196,7 +258,7 @@ def remove_sponsors_section(markdown: str) -> str:
 def extract_entries(
     categories: list[ParsedSection],
     groups: list[ParsedGroup],
-) -> list[dict]:
+) -> list[TemplateEntry]:
     """Flatten categories into individual library entries for table display.
 
     Entries appearing in multiple categories are merged into a single entry
@@ -204,27 +266,27 @@ def extract_entries(
     """
     cat_to_group = {cat["name"]: group["name"] for group in groups for cat in group["categories"]}
 
-    seen: dict[tuple[str, str], dict[str, Any]] = {}  # (url, name) -> entry
-    entries: list[dict[str, Any]] = []
+    seen: dict[tuple[str, str], TemplateEntry] = {}  # (url, name) -> entry
+    entries: list[TemplateEntry] = []
     for cat in categories:
         group_name = cat_to_group.get(cat["name"], "Other")
         for entry in cat["entries"]:
             key = (entry["url"], entry["name"])
-            existing: dict[str, Any] | None = seen.get(key)
+            existing = seen.get(key)
             if existing is None:
-                existing = {
-                    "name": entry["name"],
-                    "url": entry["url"],
-                    "description": entry["description"],
-                    "categories": [],
-                    "groups": [],
-                    "subcategories": [],
-                    "stars": None,
-                    "owner": None,
-                    "last_commit_at": None,
-                    "source_type": detect_source_type(entry["url"]),
-                    "also_see": entry["also_see"],
-                }
+                existing = TemplateEntry(
+                    name=entry["name"],
+                    url=entry["url"],
+                    description=entry["description"],
+                    categories=[],
+                    groups=[],
+                    subcategories=[],
+                    stars=None,
+                    owner=None,
+                    last_commit_at=None,
+                    source_type=detect_source_type(entry["url"]),
+                    also_see=entry["also_see"],
+                )
                 seen[key] = existing
                 entries.append(existing)
             if cat["name"] not in existing["categories"]:
@@ -235,7 +297,15 @@ def extract_entries(
             if subcat:
                 scoped = f"{cat['name']} > {subcat}"
                 if not any(s["value"] == scoped for s in existing["subcategories"]):
-                    existing["subcategories"].append({"name": subcat, "value": scoped})
+                    sub_slug = slugify(subcat)
+                    existing["subcategories"].append(
+                        TemplateSubcategory(
+                            name=subcat,
+                            value=scoped,
+                            slug=sub_slug,
+                            url=f"/categories/{cat['slug']}/{sub_slug}/",
+                        )
+                    )
     return entries
 
 
@@ -255,6 +325,12 @@ def build(repo_root: Path) -> None:
     sponsors = parse_sponsors(readme_text)
 
     categories = [cat for g in parsed_groups for cat in g["categories"]]
+    cat_slugs = [cat["slug"] for cat in categories]
+    group_slugs = [g["slug"] for g in parsed_groups]
+    all_top_level_slugs = cat_slugs + group_slugs + [BUILTIN_SLUG]
+    duplicates = {s for s, n in Counter(all_top_level_slugs).items() if n > 1}
+    if duplicates:
+        raise ValueError(f"slug collision in /categories/ namespace: {sorted(duplicates)}. Rename a category or group so their slugs differ.")
     total_entries = sum(c["entry_count"] for c in categories)
     entries = extract_entries(categories, parsed_groups)
     build_date = datetime.now(UTC)
@@ -278,6 +354,17 @@ def build(repo_root: Path) -> None:
             entry["last_commit_at"] = sd.get("last_commit_at", "")
 
     entries = sort_entries(entries)
+    category_urls = {cat["name"]: category_path(cat) for cat in categories}
+
+    filter_urls: dict[str, str] = dict(category_urls)
+    for group in parsed_groups:
+        filter_urls[group["name"]] = group_path(group["slug"])
+    for entry in entries:
+        for sub in entry.get("subcategories", []):
+            filter_urls[sub["value"]] = sub["url"]
+    builtin_entries = [e for e in entries if e.get("source_type") == BUILTIN_FILTER]
+    if builtin_entries:
+        filter_urls[BUILTIN_FILTER] = BUILTIN_PATH
 
     env = Environment(
         loader=FileSystemLoader(website / "templates"),
@@ -285,11 +372,12 @@ def build(repo_root: Path) -> None:
         trim_blocks=True,
         lstrip_blocks=True,
     )
-
     site_dir = website / "output"
     if site_dir.exists():
         shutil.rmtree(site_dir)
     site_dir.mkdir(parents=True)
+
+    filter_urls_json = json.dumps(filter_urls, sort_keys=True, ensure_ascii=False).replace("</", "<\\/")
 
     tpl_index = env.get_template("index.html")
     (site_dir / "index.html").write_text(
@@ -302,26 +390,130 @@ def build(repo_root: Path) -> None:
             repo_stars=repo_stars,
             build_date=build_date.strftime("%B %d, %Y"),
             sponsors=sponsors,
+            category_urls=category_urls,
+            filter_urls=filter_urls,
+            filter_urls_json=filter_urls_json,
         ),
         encoding="utf-8",
     )
+
+    tpl_category = env.get_template("category.html")
+    categories_dir = site_dir / "categories"
+
+    def render_category(
+        category: TemplateCategory,
+        *,
+        category_url: str,
+        entries: Sequence[TemplateEntry],
+        current_path: str,
+        page_dir: Path,
+        parent_category: ParsedSection | None = None,
+        group_categories: Sequence[ParsedSection] | None = None,
+    ) -> None:
+        page_dir.mkdir(parents=True, exist_ok=True)
+        (page_dir / "index.html").write_text(
+            tpl_category.render(
+                category=category,
+                category_url=category_url,
+                entries=entries,
+                total_categories=len(categories),
+                category_urls=category_urls,
+                current_path=current_path,
+                filter_urls=filter_urls,
+                filter_urls_json=filter_urls_json,
+                parent_category=parent_category,
+                group_categories=group_categories,
+            ),
+            encoding="utf-8",
+        )
+
+    for category in categories:
+        render_category(
+            category,
+            category_url=category_public_url(category),
+            entries=[e for e in entries if category["name"] in e["categories"]],
+            current_path=category_path(category),
+            page_dir=categories_dir / category["slug"],
+        )
+
+    for group in parsed_groups:
+        render_category(
+            synthetic_category(group["name"], group["slug"]),
+            category_url=group_public_url(group["slug"]),
+            entries=[e for e in entries if group["name"] in e["groups"]],
+            current_path=group_path(group["slug"]),
+            page_dir=categories_dir / group["slug"],
+            group_categories=group["categories"],
+        )
+
+    if builtin_entries:
+        render_category(
+            synthetic_category(BUILTIN_FILTER, BUILTIN_SLUG),
+            category_url=BUILTIN_PUBLIC_URL,
+            entries=builtin_entries,
+            current_path=BUILTIN_PATH,
+            page_dir=categories_dir / BUILTIN_SLUG,
+        )
+
+    sponsorship_dir = site_dir / "sponsorship"
+    sponsorship_dir.mkdir(parents=True, exist_ok=True)
+    tpl_sponsorship = env.get_template("sponsorship.html")
+    hero_stats: list[str] = []
+    if repo_stars:
+        hero_stats.append(f"{repo_stars}+ stars on GitHub")
+    hero_stats.append(f"Updated {build_date.strftime('%B %d, %Y')}")
+    (sponsorship_dir / "index.html").write_text(
+        tpl_sponsorship.render(hero_stats=hero_stats),
+        encoding="utf-8",
+    )
+
+    subcat_to_entries: dict[str, list[TemplateEntry]] = {}
+    subcat_meta: dict[str, tuple[str, str, str]] = {}  # value -> (cat_slug, sub_slug, sub_name)
+    cat_slug_by_url_prefix = {f"/categories/{c['slug']}/": c["slug"] for c in categories}
+    cat_by_slug = {c["slug"]: c for c in categories}
+    for entry in entries:
+        for sub in entry.get("subcategories", []):
+            value = sub["value"]
+            subcat_to_entries.setdefault(value, []).append(entry)
+            if value not in subcat_meta:
+                for prefix, cat_slug in cat_slug_by_url_prefix.items():
+                    if sub["url"].startswith(prefix):
+                        subcat_meta[value] = (cat_slug, sub["slug"], sub["name"])
+                        break
+
+    for value, (cat_slug, sub_slug, sub_name) in subcat_meta.items():
+        render_category(
+            synthetic_category(sub_name, sub_slug),
+            category_url=subcategory_public_url(cat_slug, sub_slug),
+            entries=subcat_to_entries[value],
+            current_path=subcategory_path(cat_slug, sub_slug),
+            page_dir=categories_dir / cat_slug / sub_slug,
+            parent_category=cat_by_slug[cat_slug],
+        )
 
     static_src = website / "static"
     static_dst = site_dir / "static"
     if static_src.exists():
         shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
 
-    markdown_index = annotate_entries_with_stars(
-        remove_sponsors_section(readme_text), stars_data
-    )
+    markdown_index = annotate_entries_with_stars(remove_sponsors_section(readme_text), stars_data)
     llms_template = (website / "templates" / "llms.txt").read_text(encoding="utf-8")
     llms_txt = build_llms_txt(llms_template, readme_text, stars_data)
     (site_dir / "robots.txt").write_text(build_robots_txt(), encoding="utf-8")
-    write_sitemap_xml(site_dir / "sitemap.xml", [(SITE_URL, build_date.date().isoformat())])
+    sitemap_date = build_date.date().isoformat()
+    sitemap_urls = [(SITE_URL, sitemap_date)]
+    sitemap_urls.extend((category_public_url(c), sitemap_date) for c in categories)
+    sitemap_urls.extend((group_public_url(g["slug"]), sitemap_date) for g in parsed_groups)
+    if builtin_entries:
+        sitemap_urls.append((BUILTIN_PUBLIC_URL, sitemap_date))
+    for cat_slug, sub_slug, _ in sorted(subcat_meta.values()):
+        sitemap_urls.append((subcategory_public_url(cat_slug, sub_slug), sitemap_date))
+    sitemap_urls.append((SPONSORSHIP_PUBLIC_URL, sitemap_date))
+    write_sitemap_xml(site_dir / "sitemap.xml", sitemap_urls)
     (site_dir / "index.md").write_text(markdown_index, encoding="utf-8")
     (site_dir / "llms.txt").write_text(llms_txt, encoding="utf-8")
 
-    print(f"Built single page with {len(parsed_groups)} groups, {len(categories)} categories")
+    print(f"Built site with {len(parsed_groups)} groups, {len(categories)} categories")
     print(f"Total entries: {total_entries}")
     print(f"Output: {site_dir}")
 

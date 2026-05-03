@@ -59,6 +59,19 @@ document.querySelectorAll("[data-scroll-to]").forEach(function (link) {
   });
 });
 
+// Land at #library-index without leaving the hash in the URL
+if (window.location.hash === "#library-index") {
+  const target = document.getElementById("library-index");
+  if (target) {
+    target.scrollIntoView();
+  }
+  history.replaceState(
+    null,
+    "",
+    window.location.pathname + window.location.search,
+  );
+}
+
 // Pause hero animations when scrolled out of view
 (function () {
   const hero = document.querySelector(".hero");
@@ -167,19 +180,36 @@ function applyFilters() {
   updateURL();
 }
 
-function updateURL() {
+const filterUrlsScript = document.getElementById("filter-urls");
+const filterToUrl = filterUrlsScript
+  ? JSON.parse(filterUrlsScript.textContent)
+  : {};
+
+const isIndexDocument =
+  location.pathname === "/" || location.pathname === "/index.html";
+
+const urlToFilter = {};
+Object.keys(filterToUrl).forEach(function (k) {
+  urlToFilter[filterToUrl[k]] = k;
+});
+
+function buildQueryString() {
   const params = new URLSearchParams();
   const query = searchInput ? searchInput.value.trim() : "";
   if (query) params.set("q", query);
-  if (activeFilter) {
-    params.set("filter", activeFilter);
-  }
   if (activeSort.col !== "stars" || activeSort.order !== "desc") {
     params.set("sort", activeSort.col);
     params.set("order", activeSort.order);
   }
   const qs = params.toString();
-  history.replaceState(null, "", qs ? "?" + qs : location.pathname);
+  return qs ? "?" + qs : "";
+}
+
+function updateURL() {
+  if (!isIndexDocument) return;
+  const path =
+    activeFilter && filterToUrl[activeFilter] ? filterToUrl[activeFilter] : "/";
+  history.replaceState(null, "", path + buildQueryString());
 }
 
 function getSortValue(row, col) {
@@ -202,6 +232,8 @@ function getSortValue(row, col) {
 }
 
 function sortRows() {
+  if (!tbody) return;
+
   const arr = Array.prototype.slice.call(rows);
   const col = activeSort.col;
   const order = activeSort.order;
@@ -286,13 +318,27 @@ tags.forEach(function (tag) {
   tag.addEventListener("click", function (e) {
     e.preventDefault();
     const value = tag.dataset.value;
-    activeFilter = activeFilter === value ? null : value;
-    applyFilters();
+    const url = tag.dataset.url;
+    if (isIndexDocument) {
+      activeFilter = activeFilter === value ? null : value;
+      if (activeFilter && url) {
+        history.pushState(null, "", url + buildQueryString());
+      } else {
+        history.pushState(null, "", "/" + buildQueryString());
+      }
+      applyFilters();
+    } else if (url) {
+      window.location.href = url;
+    }
   });
 });
 
 if (filterClear) {
   filterClear.addEventListener("click", function () {
+    if (!isIndexDocument) {
+      window.location.href = "/#library-index";
+      return;
+    }
     activeFilter = null;
     applyFilters();
   });
@@ -301,6 +347,10 @@ if (filterClear) {
 const noResultsClear = document.querySelector(".no-results-clear");
 if (noResultsClear) {
   noResultsClear.addEventListener("click", function () {
+    if (!isIndexDocument) {
+      window.location.href = "/";
+      return;
+    }
     if (searchInput) searchInput.value = "";
     activeFilter = null;
     applyFilters();
@@ -394,19 +444,29 @@ if (backToTop) {
 (function () {
   const params = new URLSearchParams(location.search);
   const q = params.get("q");
-  const filter = params.get("filter");
   const sort = params.get("sort");
   const order = params.get("order");
   if (q && searchInput) searchInput.value = q;
-  if (filter) activeFilter = filter;
   if (
     (sort === "name" || sort === "stars" || sort === "commit-time") &&
     (order === "desc" || order === "asc")
   ) {
     activeSort = { col: sort, order: order };
   }
-  if (q || filter || sort) {
+  const matched = urlToFilter[location.pathname];
+  if (matched) activeFilter = matched;
+  if (q || activeFilter || sort) {
     sortRows();
+  }
+  if (activeFilter) {
+    applyFilters();
   }
   updateSortIndicators();
 })();
+
+window.addEventListener("popstate", function () {
+  if (!isIndexDocument) return;
+  const matched = urlToFilter[location.pathname];
+  activeFilter = matched || null;
+  applyFilters();
+});

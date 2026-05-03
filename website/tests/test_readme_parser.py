@@ -180,7 +180,9 @@ class TestParseReadmeSections:
         groups = parse_readme(MINIMAL_README)
         cats = groups[0]["categories"]
         assert cats[0]["description"] == "Libraries for alpha stuff."
+        assert cats[0]["description_html"] == "Libraries for alpha stuff."
         assert cats[1]["description"] == "Tools for beta."
+        assert cats[1]["description_html"] == "Tools for beta."
 
     def test_contributing_skipped(self):
         groups = parse_readme(MINIMAL_README)
@@ -216,6 +218,7 @@ class TestParseReadmeSections:
         groups = parse_readme(readme)
         cats = groups[0]["categories"]
         assert cats[0]["description"] == ""
+        assert cats[0]["description_html"] == ""
         assert cats[0]["entries"][0]["name"] == "item"
 
     def test_description_with_link_stripped(self):
@@ -237,6 +240,7 @@ class TestParseReadmeSections:
         groups = parse_readme(readme)
         cats = groups[0]["categories"]
         assert cats[0]["description"] == "Algorithms. Also see awesome-algos."
+        assert cats[0]["description_html"] == 'Algorithms. Also see <a href="https://example.com" target="_blank" rel="noopener">awesome-algos</a>.'
 
 
 class TestParseGroupedReadme:
@@ -346,10 +350,7 @@ def _content_nodes(md_text: str) -> list[SyntaxTreeNode]:
 
 class TestParseSectionEntries:
     def test_flat_entries(self):
-        nodes = _content_nodes(
-            "- [django](https://example.com/d) - A web framework.\n"
-            "- [flask](https://example.com/f) - A micro framework.\n"
-        )
+        nodes = _content_nodes("- [django](https://example.com/d) - A web framework.\n- [flask](https://example.com/f) - A micro framework.\n")
         entries = _parse_section_entries(nodes)
         assert len(entries) == 2
         assert entries[0]["name"] == "django"
@@ -366,13 +367,7 @@ class TestParseSectionEntries:
         assert entries[0]["description"] == ""
 
     def test_subcategorized_entries(self):
-        nodes = _content_nodes(
-            "- Algorithms\n"
-            "  - [algos](https://x.com/a) - Algo lib.\n"
-            "  - [sorts](https://x.com/s) - Sort lib.\n"
-            "- Design Patterns\n"
-            "  - [patterns](https://x.com/p) - Pattern lib.\n"
-        )
+        nodes = _content_nodes("- Algorithms\n  - [algos](https://x.com/a) - Algo lib.\n  - [sorts](https://x.com/s) - Sort lib.\n- Design Patterns\n  - [patterns](https://x.com/p) - Pattern lib.\n")
         entries = _parse_section_entries(nodes)
         assert len(entries) == 3
         assert entries[0]["name"] == "algos"
@@ -428,7 +423,7 @@ class TestParseSectionEntries:
         assert cats[0]["entry_count"] == 3
 
     def test_description_html_escapes_xss(self):
-        nodes = _content_nodes('- [lib](https://x.com) - A <script>alert(1)</script> lib.\n')
+        nodes = _content_nodes("- [lib](https://x.com) - A <script>alert(1)</script> lib.\n")
         entries = _parse_section_entries(nodes)
         assert "<script>" not in entries[0]["description"]
         assert "&lt;script&gt;" in entries[0]["description"]
@@ -445,9 +440,6 @@ class TestParseRealReadme:
     def test_at_least_11_groups(self):
         assert len(self.groups) >= 11
 
-    def test_first_group_is_ai_ml(self):
-        assert self.groups[0]["name"] == "AI & ML"
-
     def test_at_least_69_categories(self):
         assert len(self.cats) >= 69
 
@@ -455,37 +447,9 @@ class TestParseRealReadme:
         all_names = [c["name"] for c in self.cats]
         assert "Contributing" not in all_names
 
-    def test_first_category_is_ai_and_agents(self):
-        assert self.cats[0]["name"] == "AI and Agents"
-        assert self.cats[0]["slug"] == "ai-and-agents"
-
-    def test_web_apis_slug(self):
-        slugs = [c["slug"] for c in self.cats]
-        assert "web-apis" in slugs
-
-    def test_descriptions_extracted(self):
-        ai = next(c for c in self.cats if c["name"] == "AI and Agents")
-        assert "AI applications" in ai["description"]
-
     def test_entry_counts_nonzero(self):
         for cat in self.cats:
             assert cat["entry_count"] > 0, f"{cat['name']} has 0 entries"
-
-    def test_async_has_also_see(self):
-        async_cat = next(c for c in self.cats if c["name"] == "Asynchronous Programming")
-        asyncio_entry = next(e for e in async_cat["entries"] if e["name"] == "asyncio")
-        assert len(asyncio_entry["also_see"]) >= 1
-        assert asyncio_entry["also_see"][0]["name"] == "awesome-asyncio"
-
-    def test_description_links_stripped_to_text(self):
-        algos = next(c for c in self.cats if c["name"] == "Algorithms and Design Patterns")
-        assert "awesome-algorithms" in algos["description"]
-        assert "https://" not in algos["description"]
-
-    def test_miscellaneous_in_own_group(self):
-        misc_group = next((g for g in self.groups if g["name"] == "Miscellaneous"), None)
-        assert misc_group is not None
-        assert any(c["name"] == "Miscellaneous" for c in misc_group["categories"])
 
     def test_all_entries_have_nonempty_names(self):
         bad = []

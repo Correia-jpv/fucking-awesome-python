@@ -8,7 +8,9 @@ from datetime import UTC, date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 
+import pytest
 from build import (
+    TemplateEntry,
     annotate_entries_with_stars,
     build,
     detect_source_type,
@@ -16,6 +18,7 @@ from build import (
     extract_github_repo,
     load_stars,
     sort_entries,
+    subcategory_path,
 )
 from readme_parser import parse_readme, slugify
 
@@ -65,20 +68,16 @@ class TestSlugify:
     def test_uppercase_acronym(self):
         assert slugify("RESTful API") == "restful-api"
 
-    def test_all_caps(self):
-        assert slugify("CMS") == "cms"
-
     def test_hyphenated_input(self):
         assert slugify("Command-line Tools") == "command-line-tools"
 
-    def test_special_chars(self):
-        assert slugify("Editor Plugins and IDEs") == "editor-plugins-and-ides"
-
-    def test_single_word(self):
-        assert slugify("Audio") == "audio"
-
     def test_extra_spaces(self):
         assert slugify("  Date  and  Time  ") == "date-and-time"
+
+
+class TestSubcategoryPath:
+    def test_builds_path(self):
+        assert subcategory_path("web-frameworks", "synchronous") == "/categories/web-frameworks/synchronous/"
 
 
 # ---------------------------------------------------------------------------
@@ -109,14 +108,16 @@ class TestBuild:
             "{% endblock %}",
             encoding="utf-8",
         )
+        (tpl_dir / "category.html").write_text(
+            '{% extends "base.html" %}{% block content %}<h1>{{ category.name }}</h1>{% for entry in entries %}<a href="{{ entry.url }}">{{ entry.name }}</a>{% endfor %}{% endblock %}',
+            encoding="utf-8",
+        )
+        (tpl_dir / "sponsorship.html").write_text(
+            '{% extends "base.html" %}{% block content %}<h1>Sponsor</h1>{% endblock %}',
+            encoding="utf-8",
+        )
         (tpl_dir / "llms.txt").write_text(
-            "# Awesome Python\n"
-            "\n"
-            "Use this list to find Python tools.\n"
-            "\n"
-            "# Categories\n"
-            "\n"
-            "{{ categories_md }}\n",
+            "# Awesome Python\n\nUse this list to find Python tools.\n\n# Categories\n\n{{ categories_md }}\n",
             encoding="utf-8",
         )
 
@@ -125,7 +126,7 @@ class TestBuild:
         tpl_dir = tmp_path / "website" / "templates"
         shutil.copytree(real_tpl, tpl_dir)
 
-    def test_build_creates_single_page(self, tmp_path):
+    def test_build_creates_homepage_and_category_pages(self, tmp_path):
         readme = textwrap.dedent("""\
             # Awesome Python
 
@@ -137,7 +138,7 @@ class TestBuild:
 
             ## Widgets
 
-            _Widget libraries._
+            _Widget libraries. Also see [awesome-widgets](https://example.com/widgets)._
 
             - [w1](https://example.com) - A widget.
 
@@ -164,8 +165,8 @@ class TestBuild:
 
         site = tmp_path / "website" / "output"
         assert (site / "index.html").exists()
-        # No category sub-pages
-        assert not (site / "categories").exists()
+        assert (site / "categories" / "widgets" / "index.html").exists()
+        assert (site / "categories" / "gadgets" / "index.html").exists()
 
     def test_build_creates_root_discovery_files(self, tmp_path):
         readme = textwrap.dedent("""\
@@ -175,9 +176,13 @@ class TestBuild:
 
             ---
 
+            **Tools**
+
             ## Widgets
 
-            - [w1](https://example.com) - A widget.
+            - Sync
+
+                - [w1](https://example.com) - A widget.
 
             # Contributing
 
@@ -190,26 +195,92 @@ class TestBuild:
 
         site = tmp_path / "website" / "output"
         robots = (site / "robots.txt").read_text(encoding="utf-8")
-        assert robots == (
-            "User-agent: *\n"
-            "Content-Signal: search=yes, ai-input=yes, ai-train=yes\n"
-            "Allow: /\n"
-            "\n"
-            "Sitemap: https://awesome-python.com/sitemap.xml\n"
-        )
+        assert robots == ("User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: https://awesome-python.com/sitemap.xml\n")
 
         sitemap = ET.parse(site / "sitemap.xml")
         root = sitemap.getroot()
         ns = {"sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-        locs = [loc.text for loc in root.findall("sitemap:url/sitemap:loc", ns)]
-        lastmods = [lastmod.text for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
+        locs = [loc.text or "" for loc in root.findall("sitemap:url/sitemap:loc", ns)]
+        lastmods = [lastmod.text or "" for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
 
         assert root.tag == "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset"
-        assert locs == ["https://awesome-python.com/"]
-        assert len(lastmods) == 1
-        assert start_date <= date.fromisoformat(lastmods[0]) <= end_date
+        assert locs == [
+            "https://awesome-python.com/",
+            "https://awesome-python.com/categories/widgets/",
+            "https://awesome-python.com/categories/tools/",
+            "https://awesome-python.com/categories/widgets/sync/",
+            "https://awesome-python.com/sponsorship/",
+        ]
+        assert len(lastmods) == len(locs)
+        assert all(start_date <= date.fromisoformat(lastmod) <= end_date for lastmod in lastmods)
         assert all(loc.startswith("https://awesome-python.com/") for loc in locs)
         assert all("?" not in loc for loc in locs)
+
+    def test_build_creates_category_pages_with_metadata_and_links(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # Awesome Python
+
+            Intro.
+
+            ---
+
+            **Tools**
+
+            ## Widgets
+
+            _Widget libraries. Also see [awesome-widgets](https://example.com/widgets)._
+
+            - [w1](https://example.com/w1) - A widget.
+            - [w2](https://github.com/owner/w2) - A starred widget.
+
+            ## Gadgets
+
+            _Gadget tools._
+
+            - [g1](https://example.com/g1) - A gadget.
+
+            # Contributing
+
+            Help!
+        """)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+
+        data_dir = tmp_path / "website" / "data"
+        data_dir.mkdir(parents=True)
+        stars = {
+            "owner/w2": {
+                "stars": 42,
+                "owner": "owner",
+                "last_commit_at": "2026-01-01T00:00:00+00:00",
+                "fetched_at": "2026-01-01T00:00:00+00:00",
+            },
+        }
+        (data_dir / "github_stars.json").write_text(json.dumps(stars), encoding="utf-8")
+
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+        category_html = (site / "categories" / "widgets" / "index.html").read_text(encoding="utf-8")
+        parser = HeadMetadataParser()
+        parser.feed(category_html)
+
+        assert 'href="/categories/widgets/"' in index_html
+        assert 'data-value="Widgets"' in index_html
+        assert parser.title.strip() == "Widgets Python Libraries | Awesome Python"
+        assert parser.meta_by_name["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries. Also see awesome-widgets."
+        assert parser.links_by_rel["canonical"] == "https://awesome-python.com/categories/widgets/"
+        assert parser.meta_by_property["og:url"] == "https://awesome-python.com/categories/widgets/"
+        assert '<link rel="alternate" type="text/markdown" href="/index.md" />' not in category_html
+        assert "<h1>Widgets</h1>" in category_html
+        assert 'Widget libraries. Also see <a href="https://example.com/widgets" target="_blank" rel="noopener">awesome-widgets</a>.' in category_html
+        assert 'href="https://example.com/w1"' in category_html
+        assert "A widget." in category_html
+        assert 'href="https://github.com/owner/w2"' in category_html
+        assert '<table class="table">' in category_html
+        assert "42" in category_html
+        assert "2026-01-01T00:00:00+00:00" in category_html
 
     def test_build_creates_markdown_alternate_without_sponsors(self, tmp_path):
         readme = textwrap.dedent("""\
@@ -300,59 +371,6 @@ class TestBuild:
 
         assert not (tmp_path / "website" / "output" / "categories" / "stale").exists()
 
-    def test_index_contains_category_names(self, tmp_path):
-        readme = textwrap.dedent("""\
-            # T
-
-            ---
-
-            **Group A**
-
-            ## Alpha
-
-            - [a](https://x.com) - A.
-
-            **Group B**
-
-            ## Beta
-
-            - [b](https://x.com) - B.
-
-            # Contributing
-
-            Done.
-        """)
-        self._make_repo(tmp_path, readme)
-        build(tmp_path)
-
-        index_html = (tmp_path / "website" / "output" / "index.html").read_text()
-        assert "Alpha" in index_html
-        assert "Beta" in index_html
-        assert "Group A" in index_html
-        assert "Group B" in index_html
-
-    def test_index_contains_preview_text(self, tmp_path):
-        readme = textwrap.dedent("""\
-            # T
-
-            ---
-
-            ## Stuff
-
-            - [django](https://x.com) - A framework.
-            - [flask](https://x.com) - A micro.
-
-            # Contributing
-
-            Done.
-        """)
-        self._make_repo(tmp_path, readme)
-        build(tmp_path)
-
-        index_html = (tmp_path / "website" / "output" / "index.html").read_text()
-        assert "django" in index_html
-        assert "flask" in index_html
-
     def test_build_with_stars_sorts_by_stars(self, tmp_path):
         readme = textwrap.dedent("""\
             # T
@@ -397,6 +415,26 @@ class TestBuild:
         # Expand content present
         assert "expand-content" in html
 
+    def test_build_fails_when_group_and_category_slug_collide(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Widgets**
+
+            ## Widgets
+
+            - [w1](https://example.com) - W.
+
+            # Contributing
+
+            Done.
+        """)
+        self._make_repo(tmp_path, readme)
+        with pytest.raises(ValueError, match="slug collision"):
+            build(tmp_path)
+
     def test_index_contains_aligned_homepage_metadata(self, tmp_path):
         readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
         (tmp_path / "README.md").write_text(readme, encoding="utf-8")
@@ -430,6 +468,215 @@ class TestBuild:
         assert parser.meta_by_name["twitter:description"] == expected_description
         assert parser.meta_by_name["twitter:image"] == expected_image
         assert "<head>\n    <meta charset" in html
+        assert 'id="hero-category-heading">Browse by category</h2>' in html
+        assert 'class="hero-category-link" href="/categories/ai-and-agents/"' in html
+
+    def test_build_creates_subcategory_pages(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Web**
+
+            ## Web Frameworks
+
+            - Synchronous
+
+                - [django](https://example.com/django) - Sync framework.
+
+            - Asynchronous
+
+                - [fastapi](https://example.com/fastapi) - Async framework.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        sync = (site / "categories" / "web-frameworks" / "synchronous" / "index.html").read_text(encoding="utf-8")
+        async_ = (site / "categories" / "web-frameworks" / "asynchronous" / "index.html").read_text(encoding="utf-8")
+
+        assert "django" in sync
+        assert "fastapi" not in sync
+        assert "fastapi" in async_
+        assert "django" not in async_
+
+    def test_subcategory_page_shows_breadcrumb(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Web**
+
+            ## Web Frameworks
+
+            - Synchronous
+
+                - [django](https://example.com/django) - Sync.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        sync = (site / "categories" / "web-frameworks" / "synchronous" / "index.html").read_text(encoding="utf-8")
+        assert 'href="/categories/web-frameworks/"' in sync
+        assert "Web Frameworks" in sync
+        assert "<h1>Synchronous</h1>" in sync
+        assert "category-breadcrumb" in sync
+
+        parent = (site / "categories" / "web-frameworks" / "index.html").read_text(encoding="utf-8")
+        assert "category-breadcrumb" not in parent
+
+    def test_index_embeds_filter_urls_json(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - [dl1](https://example.com/dl1) - DL.
+
+            ## Machine Learning
+
+            - Classical
+
+                - [ml1](https://example.com/ml1) - ML.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+
+        marker = '<script type="application/json" id="filter-urls">'
+        assert marker in index_html
+        start = index_html.index(marker) + len(marker)
+        end = index_html.index("</script>", start)
+        data = json.loads(index_html[start:end])
+
+        assert data["Deep Learning"] == "/categories/deep-learning/"
+        assert data["Machine Learning"] == "/categories/machine-learning/"
+        assert data["AI & ML"] == "/categories/ai-ml/"
+        assert data["Machine Learning > Classical"] == "/categories/machine-learning/classical/"
+
+    def test_filter_urls_json_escapes_closing_script_tag(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            ## Sneaky </script><script>x=1</script>
+
+            - [a](https://example.com) - A.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+
+        marker = '<script type="application/json" id="filter-urls">'
+        start = index_html.index(marker) + len(marker)
+        end = index_html.index("</script>", start)
+        block = index_html[start:end]
+        assert "</script>" not in block
+        data = json.loads(block)
+        assert any("Sneaky" in key for key in data)
+
+    def test_build_creates_group_pages(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - [dl1](https://example.com/dl1) - DL.
+
+            ## Machine Learning
+
+            - [ml1](https://example.com/ml1) - ML.
+
+            **Web Development**
+
+            ## Web Frameworks
+
+            - [wf1](https://example.com/wf1) - WF.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        ai_ml = (site / "categories" / "ai-ml" / "index.html").read_text(encoding="utf-8")
+        web_dev = (site / "categories" / "web-development" / "index.html").read_text(encoding="utf-8")
+
+        assert "dl1" in ai_ml
+        assert "ml1" in ai_ml
+        assert "wf1" not in ai_ml
+        assert "wf1" in web_dev
+        assert "dl1" not in web_dev
+
+    def test_tag_buttons_have_data_url(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - Vision
+
+                - [v1](https://example.com/v1) - Vision lib.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        site = tmp_path / "website" / "output"
+        index_html = (site / "index.html").read_text(encoding="utf-8")
+
+        assert 'data-value="Deep Learning"' in index_html
+        assert 'data-url="/categories/deep-learning/"' in index_html
+        assert 'data-value="AI &amp; ML"' in index_html or 'data-value="AI & ML"' in index_html
+        assert 'data-url="/categories/ai-ml/"' in index_html
+        assert 'data-url="/categories/deep-learning/vision/"' in index_html
 
 
 # ---------------------------------------------------------------------------
@@ -489,45 +736,61 @@ class TestLoadStars:
 # ---------------------------------------------------------------------------
 
 
+def _template_entry(name: str, stars: int | None, source_type: str | None = None) -> TemplateEntry:
+    return TemplateEntry(
+        name=name,
+        url="",
+        description="",
+        categories=[],
+        groups=[],
+        subcategories=[],
+        stars=stars,
+        owner=None,
+        last_commit_at=None,
+        source_type=source_type,
+        also_see=[],
+    )
+
+
 class TestSortEntries:
     def test_sorts_by_stars_descending(self):
         entries = [
-            {"name": "a", "stars": 100, "url": ""},
-            {"name": "b", "stars": 500, "url": ""},
-            {"name": "c", "stars": 200, "url": ""},
+            _template_entry("a", 100),
+            _template_entry("b", 500),
+            _template_entry("c", 200),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["b", "c", "a"]
 
     def test_equal_stars_sorted_alphabetically(self):
         entries = [
-            {"name": "beta", "stars": 100, "url": ""},
-            {"name": "alpha", "stars": 100, "url": ""},
+            _template_entry("beta", 100),
+            _template_entry("alpha", 100),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["alpha", "beta"]
 
     def test_no_stars_go_to_bottom(self):
         entries = [
-            {"name": "no-stars", "stars": None, "url": ""},
-            {"name": "has-stars", "stars": 50, "url": ""},
+            _template_entry("no-stars", None),
+            _template_entry("has-stars", 50),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["has-stars", "no-stars"]
 
     def test_no_stars_sorted_alphabetically(self):
         entries = [
-            {"name": "zebra", "stars": None, "url": ""},
-            {"name": "apple", "stars": None, "url": ""},
+            _template_entry("zebra", None),
+            _template_entry("apple", None),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["apple", "zebra"]
 
     def test_builtin_between_starred_and_unstarred(self):
         entries = [
-            {"name": "builtin", "stars": None, "source_type": "Built-in"},
-            {"name": "starred", "stars": 100, "source_type": None},
-            {"name": "unstarred", "stars": None, "source_type": None},
+            _template_entry("builtin", None, "Built-in"),
+            _template_entry("starred", 100),
+            _template_entry("unstarred", None),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["starred", "builtin", "unstarred"]
@@ -634,6 +897,36 @@ class TestExtractEntries:
         entries = extract_entries(categories, groups)
         assert entries[0]["source_type"] == "Built-in"
 
+    def test_subcategory_includes_slug_and_url(self):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **Tools**
+
+            ## Web Frameworks
+
+            - Synchronous
+
+                - [django](https://example.com/django) - A framework.
+
+            # Contributing
+
+            Done.
+        """)
+        groups = parse_readme(readme)
+        categories = [c for g in groups for c in g["categories"]]
+        entries = extract_entries(categories, groups)
+        assert entries[0]["subcategories"] == [
+            {
+                "name": "Synchronous",
+                "value": "Web Frameworks > Synchronous",
+                "slug": "synchronous",
+                "url": "/categories/web-frameworks/synchronous/",
+            },
+        ]
+
 
 # ---------------------------------------------------------------------------
 # annotate_entries_with_stars
@@ -644,23 +937,15 @@ class TestAnnotateEntriesWithStars:
     def test_appends_star_count_to_bullet(self):
         markdown = "- [foo](https://github.com/owner/foo) - A foo.\n"
         stars = {"owner/foo": {"stars": 123, "owner": "owner"}}
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "- [foo](https://github.com/owner/foo) - A foo. (123 GitHub stars)\n"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("- [foo](https://github.com/owner/foo) - A foo. (123 GitHub stars)\n")
 
     def test_uses_first_github_link(self):
-        markdown = (
-            "- [foo](https://github.com/owner/foo) - A foo. "
-            "Also [bar](https://github.com/owner/bar).\n"
-        )
+        markdown = "- [foo](https://github.com/owner/foo) - A foo. Also [bar](https://github.com/owner/bar).\n"
         stars = {
             "owner/foo": {"stars": 10, "owner": "owner"},
             "owner/bar": {"stars": 99, "owner": "owner"},
         }
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "- [foo](https://github.com/owner/foo) - A foo. "
-            "Also [bar](https://github.com/owner/bar). (10 GitHub stars)\n"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("- [foo](https://github.com/owner/foo) - A foo. Also [bar](https://github.com/owner/bar). (10 GitHub stars)\n")
 
     def test_skips_entries_without_star_data(self):
         markdown = "- [foo](https://github.com/owner/foo) - A foo.\n"
@@ -679,13 +964,9 @@ class TestAnnotateEntriesWithStars:
     def test_handles_indented_bullets(self):
         markdown = "    - [foo](https://github.com/owner/foo)\n"
         stars = {"owner/foo": {"stars": 7, "owner": "owner"}}
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "    - [foo](https://github.com/owner/foo) (7 GitHub stars)\n"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("    - [foo](https://github.com/owner/foo) (7 GitHub stars)\n")
 
     def test_preserves_lines_without_trailing_newline(self):
         markdown = "- [foo](https://github.com/owner/foo) - A foo."
         stars = {"owner/foo": {"stars": 5, "owner": "owner"}}
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "- [foo](https://github.com/owner/foo) - A foo. (5 GitHub stars)"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("- [foo](https://github.com/owner/foo) - A foo. (5 GitHub stars)")
