@@ -132,6 +132,7 @@ Hard-won sizing rules (do not relax):
 - `rem` for spacing and type. `px` only for borders and shadows.
 - CSS custom properties for all colors and repeated values.
 - Sibling components (card lists, grid items) share identical spacing.
+- Use flexbox or grid for layout. Avoid floats and absolute positioning except for genuine overlay cases (focus rings, sticky headers).
 - Never `!important`. Fix specificity instead.
 
 ## Elevation & Depth
