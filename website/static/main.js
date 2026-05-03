@@ -184,17 +184,14 @@ const filterUrlsScript = document.getElementById("filter-urls");
 const filterToUrl = filterUrlsScript
   ? JSON.parse(filterUrlsScript.textContent)
   : {};
-const urlToFilter = {};
-Object.keys(filterToUrl).forEach(function (k) {
-  urlToFilter[filterToUrl[k]] = k;
-});
 
 const isIndexDocument =
   location.pathname === "/" || location.pathname === "/index.html";
 
-function isIndexPage() {
-  return isIndexDocument;
-}
+const urlToFilter = {};
+Object.keys(filterToUrl).forEach(function (k) {
+  urlToFilter[filterToUrl[k]] = k;
+});
 
 function buildQueryString() {
   const params = new URLSearchParams();
@@ -209,7 +206,7 @@ function buildQueryString() {
 }
 
 function updateURL() {
-  if (!isIndexPage()) return;
+  if (!isIndexDocument) return;
   const path =
     activeFilter && filterToUrl[activeFilter] ? filterToUrl[activeFilter] : "/";
   history.replaceState(null, "", path + buildQueryString());
@@ -322,7 +319,7 @@ tags.forEach(function (tag) {
     e.preventDefault();
     const value = tag.dataset.value;
     const url = tag.dataset.url;
-    if (isIndexPage()) {
+    if (isIndexDocument) {
       activeFilter = activeFilter === value ? null : value;
       if (activeFilter && url) {
         history.pushState(null, "", url + buildQueryString());
@@ -332,16 +329,13 @@ tags.forEach(function (tag) {
       applyFilters();
     } else if (url) {
       window.location.href = url;
-    } else {
-      activeFilter = activeFilter === value ? null : value;
-      applyFilters();
     }
   });
 });
 
 if (filterClear) {
   filterClear.addEventListener("click", function () {
-    if (!isIndexPage()) {
+    if (!isIndexDocument) {
       window.location.href = "/#library-index";
       return;
     }
@@ -353,7 +347,7 @@ if (filterClear) {
 const noResultsClear = document.querySelector(".no-results-clear");
 if (noResultsClear) {
   noResultsClear.addEventListener("click", function () {
-    if (!isIndexPage()) {
+    if (!isIndexDocument) {
       window.location.href = "/";
       return;
     }
@@ -464,11 +458,14 @@ if (backToTop) {
   if (q || activeFilter || sort) {
     sortRows();
   }
+  if (activeFilter) {
+    applyFilters();
+  }
   updateSortIndicators();
 })();
 
 window.addEventListener("popstate", function () {
-  if (!isIndexPage()) return;
+  if (!isIndexDocument) return;
   const matched = urlToFilter[location.pathname];
   activeFilter = matched || null;
   applyFilters();

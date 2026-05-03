@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import xml.etree.ElementTree as ET
+from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -114,6 +115,10 @@ def subcategory_path(category_slug: str, subcategory_slug: str) -> str:
 
 def subcategory_public_url(category_slug: str, subcategory_slug: str) -> str:
     return f"{SITE_URL}categories/{category_slug}/{subcategory_slug}/"
+
+
+def synthetic_category(name: str, slug: str) -> dict[str, str]:
+    return {"name": name, "slug": slug, "description": "", "description_html": ""}
 
 
 def write_sitemap_xml(path: Path, urls: Sequence[tuple[str, str]]) -> None:
@@ -296,7 +301,7 @@ def build(repo_root: Path) -> None:
     cat_slugs = [cat["slug"] for cat in categories]
     group_slugs = [g["slug"] for g in parsed_groups]
     all_top_level_slugs = cat_slugs + group_slugs + [BUILTIN_SLUG]
-    duplicates = {s for s in all_top_level_slugs if all_top_level_slugs.count(s) > 1}
+    duplicates = {s for s, n in Counter(all_top_level_slugs).items() if n > 1}
     if duplicates:
         raise ValueError(
             f"slug collision in /categories/ namespace: {sorted(duplicates)}. "
@@ -343,8 +348,6 @@ def build(repo_root: Path) -> None:
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    env.filters["slugify"] = slugify
-
     site_dir = website / "output"
     if site_dir.exists():
         shutil.rmtree(site_dir)
@@ -364,6 +367,7 @@ def build(repo_root: Path) -> None:
             build_date=build_date.strftime("%B %d, %Y"),
             sponsors=sponsors,
             category_urls=category_urls,
+            filter_urls=filter_urls,
             filter_urls_json=filter_urls_json,
         ),
         encoding="utf-8",
@@ -371,70 +375,60 @@ def build(repo_root: Path) -> None:
 
     tpl_category = env.get_template("category.html")
     categories_dir = site_dir / "categories"
-    for category in categories:
-        category_entries = [entry for entry in entries if category["name"] in entry["categories"]]
-        page_dir = categories_dir / category["slug"]
+
+    def render_category(
+        category: dict,
+        *,
+        category_url: str,
+        entries: list[dict],
+        current_path: str,
+        page_dir: Path,
+        parent_category: dict | None = None,
+        group_categories: list | None = None,
+    ) -> None:
         page_dir.mkdir(parents=True, exist_ok=True)
         (page_dir / "index.html").write_text(
             tpl_category.render(
                 category=category,
-                category_url=category_public_url(category),
-                entries=category_entries,
+                category_url=category_url,
+                entries=entries,
                 total_categories=len(categories),
-                page_kind="category",
                 category_urls=category_urls,
-                current_path=category_path(category),
+                current_path=current_path,
+                filter_urls=filter_urls,
                 filter_urls_json=filter_urls_json,
+                parent_category=parent_category,
+                group_categories=group_categories,
             ),
             encoding="utf-8",
+        )
+
+    for category in categories:
+        render_category(
+            category,
+            category_url=category_public_url(category),
+            entries=[e for e in entries if category["name"] in e["categories"]],
+            current_path=category_path(category),
+            page_dir=categories_dir / category["slug"],
         )
 
     for group in parsed_groups:
-        group_entries = [entry for entry in entries if group["name"] in entry["groups"]]
-        page_dir = categories_dir / group["slug"]
-        page_dir.mkdir(parents=True, exist_ok=True)
-        synthetic = {
-            "name": group["name"],
-            "slug": group["slug"],
-            "description": "",
-            "description_html": "",
-        }
-        (page_dir / "index.html").write_text(
-            tpl_category.render(
-                category=synthetic,
-                category_url=group_public_url(group["slug"]),
-                entries=group_entries,
-                total_categories=len(categories),
-                page_kind="group",
-                category_urls=category_urls,
-                current_path=group_path(group["slug"]),
-                filter_urls_json=filter_urls_json,
-                group_categories=group["categories"],
-            ),
-            encoding="utf-8",
+        render_category(
+            synthetic_category(group["name"], group["slug"]),
+            category_url=group_public_url(group["slug"]),
+            entries=[e for e in entries if group["name"] in e["groups"]],
+            current_path=group_path(group["slug"]),
+            page_dir=categories_dir / group["slug"],
+            group_categories=group["categories"],
         )
 
     if builtin_entries:
-        page_dir = categories_dir / BUILTIN_SLUG
-        page_dir.mkdir(parents=True, exist_ok=True)
-        synthetic = {
-            "name": BUILTIN_FILTER,
-            "slug": BUILTIN_SLUG,
-            "description": "",
-            "description_html": "",
-        }
-        (page_dir / "index.html").write_text(
-            tpl_category.render(
-                category=synthetic,
-                category_url=BUILTIN_PUBLIC_URL,
-                entries=builtin_entries,
-                total_categories=len(categories),
-                page_kind="built-in",
-                category_urls=category_urls,
-                current_path=BUILTIN_PATH,
-                filter_urls_json=filter_urls_json,
-            ),
-            encoding="utf-8",
+        render_category(
+            synthetic_category(BUILTIN_FILTER, BUILTIN_SLUG),
+            category_url=BUILTIN_PUBLIC_URL,
+            entries=builtin_entries,
+            current_path=BUILTIN_PATH,
+            page_dir=categories_dir / BUILTIN_SLUG,
         )
 
     sponsorship_dir = site_dir / "sponsorship"
@@ -446,51 +440,33 @@ def build(repo_root: Path) -> None:
     hero_stats.append(f"{total_entries}+ curated projects")
     hero_stats.append(f"Updated {build_date.strftime('%B %d, %Y')}")
     (sponsorship_dir / "index.html").write_text(
-        tpl_sponsorship.render(
-            total_entries=total_entries,
-            total_categories=len(categories),
-            hero_stats=hero_stats,
-        ),
+        tpl_sponsorship.render(hero_stats=hero_stats),
         encoding="utf-8",
     )
 
-    seen_subcats: set[tuple[str, str]] = set()
-    for category in categories:
-        cat_url_prefix = f"/categories/{category['slug']}/"
-        for entry in entries:
-            for sub in entry.get("subcategories", []):
-                if not sub["url"].startswith(cat_url_prefix):
-                    continue
-                key = (category["slug"], sub["slug"])
-                if key in seen_subcats:
-                    continue
-                seen_subcats.add(key)
-                sub_entries = [
-                    e for e in entries
-                    if any(s["value"] == sub["value"] for s in e.get("subcategories", []))
-                ]
-                page_dir = categories_dir / category["slug"] / sub["slug"]
-                page_dir.mkdir(parents=True, exist_ok=True)
-                synthetic = {
-                    "name": sub["name"],
-                    "slug": sub["slug"],
-                    "description": "",
-                    "description_html": "",
-                }
-                (page_dir / "index.html").write_text(
-                    tpl_category.render(
-                        category=synthetic,
-                        category_url=subcategory_public_url(category["slug"], sub["slug"]),
-                        entries=sub_entries,
-                        total_categories=len(categories),
-                        page_kind="subcategory",
-                        parent_category=category,
-                        category_urls=category_urls,
-                        current_path=subcategory_path(category["slug"], sub["slug"]),
-                        filter_urls_json=filter_urls_json,
-                    ),
-                    encoding="utf-8",
-                )
+    subcat_to_entries: dict[str, list[dict]] = {}
+    subcat_meta: dict[str, tuple[str, str, str]] = {}  # value -> (cat_slug, sub_slug, sub_name)
+    cat_slug_by_url_prefix = {f"/categories/{c['slug']}/": c["slug"] for c in categories}
+    cat_by_slug = {c["slug"]: c for c in categories}
+    for entry in entries:
+        for sub in entry.get("subcategories", []):
+            value = sub["value"]
+            subcat_to_entries.setdefault(value, []).append(entry)
+            if value not in subcat_meta:
+                for prefix, cat_slug in cat_slug_by_url_prefix.items():
+                    if sub["url"].startswith(prefix):
+                        subcat_meta[value] = (cat_slug, sub["slug"], sub["name"])
+                        break
+
+    for value, (cat_slug, sub_slug, sub_name) in subcat_meta.items():
+        render_category(
+            synthetic_category(sub_name, sub_slug),
+            category_url=subcategory_public_url(cat_slug, sub_slug),
+            entries=subcat_to_entries[value],
+            current_path=subcategory_path(cat_slug, sub_slug),
+            page_dir=categories_dir / cat_slug / sub_slug,
+            parent_category=cat_by_slug[cat_slug],
+        )
 
     static_src = website / "static"
     static_dst = site_dir / "static"
@@ -509,7 +485,7 @@ def build(repo_root: Path) -> None:
     sitemap_urls.extend((group_public_url(g["slug"]), sitemap_date) for g in parsed_groups)
     if builtin_entries:
         sitemap_urls.append((BUILTIN_PUBLIC_URL, sitemap_date))
-    for cat_slug, sub_slug in sorted(seen_subcats):
+    for cat_slug, sub_slug, _ in sorted(subcat_meta.values()):
         sitemap_urls.append((subcategory_public_url(cat_slug, sub_slug), sitemap_date))
     sitemap_urls.append((SPONSORSHIP_PUBLIC_URL, sitemap_date))
     write_sitemap_xml(site_dir / "sitemap.xml", sitemap_urls)

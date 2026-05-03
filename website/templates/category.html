@@ -24,7 +24,7 @@
     </nav>
 
     <div class="category-hero-copy">
-      {% if page_kind == "subcategory" and parent_category %}
+      {% if parent_category %}
       <p class="category-breadcrumb">
         <a href="/categories/{{ parent_category.slug }}/">{{ parent_category.name }}</a>
       </p>
@@ -183,7 +183,7 @@
             >
             {% endfor %}
             {% if entry.groups %}
-            {% set group_url = "/categories/" ~ (entry.groups[0] | slugify) ~ "/" %}
+            {% set group_url = filter_urls[entry.groups[0]] %}
             <button
               class="tag tag-group{% if group_url == current_path %} active{% endif %}"
               data-value="{{ entry.groups[0] }}"

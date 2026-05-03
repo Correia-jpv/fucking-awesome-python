@@ -235,7 +235,7 @@
             <button
               class="tag tag-group"
               data-value="{{ entry.groups[0] }}"
-              data-url="/categories/{{ entry.groups[0] | slugify }}/"
+              data-url="{{ filter_urls[entry.groups[0]] }}"
             >
               {{ entry.groups[0] }}
             </button>

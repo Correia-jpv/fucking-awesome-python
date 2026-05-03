@@ -354,13 +354,10 @@ kbd {
 
 .hero-category-links {
   list-style: none;
-  columns: 5 9.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
   column-gap: clamp(1.25rem, 3vw, 2.5rem);
-}
-
-.hero-category-links li {
-  break-inside: avoid;
-  margin-bottom: 0.28rem;
+  row-gap: 0.28rem;
 }
 
 .hero-category-link {
@@ -480,7 +477,6 @@ kbd {
 }
 
 .category-subtitle {
-  max-width: 68ch;
   margin-top: 1.1rem;
   color: var(--hero-muted);
   font-size: clamp(1rem, 1.8vw, 1.18rem);
@@ -1544,7 +1540,7 @@ th[data-sort].sort-asc::after {
   }
 
   .hero-category-links {
-    columns: 3 8rem;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
   }
 
   .results-note {
@@ -1612,7 +1608,7 @@ th[data-sort].sort-asc::after {
   }
 
   .hero-category-links {
-    columns: 3 6.3rem;
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
     column-gap: 0.75rem;
   }
 
