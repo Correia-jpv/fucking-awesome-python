@@ -347,7 +347,7 @@ tags.forEach(function (tag) {
       }
       applyFilters();
     } else if (url) {
-      window.location.href = url;
+      window.location.href = url + "#library-index";
     }
   });
 });
