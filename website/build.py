@@ -9,10 +9,10 @@ from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from jinja2 import Environment, FileSystemLoader
-from readme_parser import ParsedGroup, ParsedSection, parse_readme, parse_sponsors, slugify
+from readme_parser import AlsoSee, ParsedGroup, ParsedSection, parse_readme, parse_sponsors, slugify
 
 GITHUB_REPO_URL_RE = re.compile(r"^https?://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)\s]+)\)")
@@ -34,6 +34,37 @@ SOURCE_TYPE_DOMAINS = {
     "gitlab.com": "GitLab",
     "bitbucket.org": "Bitbucket",
 }
+
+
+class TemplateSubcategory(TypedDict):
+    name: str
+    value: str
+    slug: str
+    url: str
+
+
+class TemplateEntry(TypedDict):
+    name: str
+    url: str
+    description: str
+    categories: list[str]
+    groups: list[str]
+    subcategories: list[TemplateSubcategory]
+    stars: int | None
+    owner: str | None
+    last_commit_at: str | None
+    source_type: str | None
+    also_see: list[AlsoSee]
+
+
+class SyntheticCategory(TypedDict):
+    name: str
+    slug: str
+    description: str
+    description_html: str
+
+
+TemplateCategory = ParsedSection | SyntheticCategory
 
 
 def detect_source_type(url: str) -> str | None:
@@ -64,13 +95,13 @@ def load_stars(path: Path) -> dict[str, dict]:
     return {}
 
 
-def sort_entries(entries: list[dict]) -> list[dict]:
+def sort_entries(entries: Sequence[TemplateEntry]) -> list[TemplateEntry]:
     """Sort entries by stars descending, then name ascending.
 
     Three tiers: starred entries first, stdlib second, other non-starred last.
     """
 
-    def sort_key(entry: dict) -> tuple[int, int, int, str]:
+    def sort_key(entry: TemplateEntry) -> tuple[int, int, int, str]:
         stars = entry["stars"]
         name = entry["name"].lower()
         if stars is not None:
@@ -84,13 +115,7 @@ def sort_entries(entries: list[dict]) -> list[dict]:
 
 
 def build_robots_txt() -> str:
-    return (
-        "User-agent: *\n"
-        "Content-Signal: search=yes, ai-input=yes, ai-train=yes\n"
-        "Allow: /\n"
-        "\n"
-        f"Sitemap: {SITEMAP_URL}\n"
-    )
+    return f"User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: {SITEMAP_URL}\n"
 
 
 def category_path(category: ParsedSection) -> str:
@@ -117,7 +142,7 @@ def subcategory_public_url(category_slug: str, subcategory_slug: str) -> str:
     return f"{SITE_URL}categories/{category_slug}/{subcategory_slug}/"
 
 
-def synthetic_category(name: str, slug: str) -> dict[str, str]:
+def synthetic_category(name: str, slug: str) -> SyntheticCategory:
     return {"name": name, "slug": slug, "description": "", "description_html": ""}
 
 
@@ -202,7 +227,7 @@ def annotate_entries_with_stars(
             if not entry or "stars" not in entry:
                 continue
             stripped = line.rstrip("\n")
-            ending = line[len(stripped):]
+            ending = line[len(stripped) :]
             annotated = f"{stripped} ({format_stars(entry['stars'])}){ending}"
             break
         out.append(annotated)
@@ -233,7 +258,7 @@ def remove_sponsors_section(markdown: str) -> str:
 def extract_entries(
     categories: list[ParsedSection],
     groups: list[ParsedGroup],
-) -> list[dict]:
+) -> list[TemplateEntry]:
     """Flatten categories into individual library entries for table display.
 
     Entries appearing in multiple categories are merged into a single entry
@@ -241,27 +266,27 @@ def extract_entries(
     """
     cat_to_group = {cat["name"]: group["name"] for group in groups for cat in group["categories"]}
 
-    seen: dict[tuple[str, str], dict[str, Any]] = {}  # (url, name) -> entry
-    entries: list[dict[str, Any]] = []
+    seen: dict[tuple[str, str], TemplateEntry] = {}  # (url, name) -> entry
+    entries: list[TemplateEntry] = []
     for cat in categories:
         group_name = cat_to_group.get(cat["name"], "Other")
         for entry in cat["entries"]:
             key = (entry["url"], entry["name"])
-            existing: dict[str, Any] | None = seen.get(key)
+            existing = seen.get(key)
             if existing is None:
-                existing = {
-                    "name": entry["name"],
-                    "url": entry["url"],
-                    "description": entry["description"],
-                    "categories": [],
-                    "groups": [],
-                    "subcategories": [],
-                    "stars": None,
-                    "owner": None,
-                    "last_commit_at": None,
-                    "source_type": detect_source_type(entry["url"]),
-                    "also_see": entry["also_see"],
-                }
+                existing = TemplateEntry(
+                    name=entry["name"],
+                    url=entry["url"],
+                    description=entry["description"],
+                    categories=[],
+                    groups=[],
+                    subcategories=[],
+                    stars=None,
+                    owner=None,
+                    last_commit_at=None,
+                    source_type=detect_source_type(entry["url"]),
+                    also_see=entry["also_see"],
+                )
                 seen[key] = existing
                 entries.append(existing)
             if cat["name"] not in existing["categories"]:
@@ -273,12 +298,14 @@ def extract_entries(
                 scoped = f"{cat['name']} > {subcat}"
                 if not any(s["value"] == scoped for s in existing["subcategories"]):
                     sub_slug = slugify(subcat)
-                    existing["subcategories"].append({
-                        "name": subcat,
-                        "value": scoped,
-                        "slug": sub_slug,
-                        "url": f"/categories/{cat['slug']}/{sub_slug}/",
-                    })
+                    existing["subcategories"].append(
+                        TemplateSubcategory(
+                            name=subcat,
+                            value=scoped,
+                            slug=sub_slug,
+                            url=f"/categories/{cat['slug']}/{sub_slug}/",
+                        )
+                    )
     return entries
 
 
@@ -303,10 +330,7 @@ def build(repo_root: Path) -> None:
     all_top_level_slugs = cat_slugs + group_slugs + [BUILTIN_SLUG]
     duplicates = {s for s, n in Counter(all_top_level_slugs).items() if n > 1}
     if duplicates:
-        raise ValueError(
-            f"slug collision in /categories/ namespace: {sorted(duplicates)}. "
-            "Rename a category or group so their slugs differ."
-        )
+        raise ValueError(f"slug collision in /categories/ namespace: {sorted(duplicates)}. Rename a category or group so their slugs differ.")
     total_entries = sum(c["entry_count"] for c in categories)
     entries = extract_entries(categories, parsed_groups)
     build_date = datetime.now(UTC)
@@ -377,14 +401,14 @@ def build(repo_root: Path) -> None:
     categories_dir = site_dir / "categories"
 
     def render_category(
-        category: dict,
+        category: TemplateCategory,
         *,
         category_url: str,
-        entries: list[dict],
+        entries: Sequence[TemplateEntry],
         current_path: str,
         page_dir: Path,
-        parent_category: dict | None = None,
-        group_categories: list | None = None,
+        parent_category: ParsedSection | None = None,
+        group_categories: Sequence[ParsedSection] | None = None,
     ) -> None:
         page_dir.mkdir(parents=True, exist_ok=True)
         (page_dir / "index.html").write_text(
@@ -443,7 +467,7 @@ def build(repo_root: Path) -> None:
         encoding="utf-8",
     )
 
-    subcat_to_entries: dict[str, list[dict]] = {}
+    subcat_to_entries: dict[str, list[TemplateEntry]] = {}
     subcat_meta: dict[str, tuple[str, str, str]] = {}  # value -> (cat_slug, sub_slug, sub_name)
     cat_slug_by_url_prefix = {f"/categories/{c['slug']}/": c["slug"] for c in categories}
     cat_by_slug = {c["slug"]: c for c in categories}
@@ -472,9 +496,7 @@ def build(repo_root: Path) -> None:
     if static_src.exists():
         shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
 
-    markdown_index = annotate_entries_with_stars(
-        remove_sponsors_section(readme_text), stars_data
-    )
+    markdown_index = annotate_entries_with_stars(remove_sponsors_section(readme_text), stars_data)
     llms_template = (website / "templates" / "llms.txt").read_text(encoding="utf-8")
     llms_txt = build_llms_txt(llms_template, readme_text, stars_data)
     (site_dir / "robots.txt").write_text(build_robots_txt(), encoding="utf-8")

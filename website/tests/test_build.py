@@ -9,8 +9,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
-
 from build import (
+    TemplateEntry,
     annotate_entries_with_stars,
     build,
     detect_source_type,
@@ -121,28 +121,15 @@ class TestBuild:
             encoding="utf-8",
         )
         (tpl_dir / "category.html").write_text(
-            '{% extends "base.html" %}{% block content %}'
-            "<h1>{{ category.name }}</h1>"
-            "{% for entry in entries %}"
-            '<a href="{{ entry.url }}">{{ entry.name }}</a>'
-            "{% endfor %}"
-            "{% endblock %}",
+            '{% extends "base.html" %}{% block content %}<h1>{{ category.name }}</h1>{% for entry in entries %}<a href="{{ entry.url }}">{{ entry.name }}</a>{% endfor %}{% endblock %}',
             encoding="utf-8",
         )
         (tpl_dir / "sponsorship.html").write_text(
-            '{% extends "base.html" %}{% block content %}'
-            "<h1>Sponsor</h1>"
-            "{% endblock %}",
+            '{% extends "base.html" %}{% block content %}<h1>Sponsor</h1>{% endblock %}',
             encoding="utf-8",
         )
         (tpl_dir / "llms.txt").write_text(
-            "# Awesome Python\n"
-            "\n"
-            "Use this list to find Python tools.\n"
-            "\n"
-            "# Categories\n"
-            "\n"
-            "{{ categories_md }}\n",
+            "# Awesome Python\n\nUse this list to find Python tools.\n\n# Categories\n\n{{ categories_md }}\n",
             encoding="utf-8",
         )
 
@@ -220,19 +207,13 @@ class TestBuild:
 
         site = tmp_path / "website" / "output"
         robots = (site / "robots.txt").read_text(encoding="utf-8")
-        assert robots == (
-            "User-agent: *\n"
-            "Content-Signal: search=yes, ai-input=yes, ai-train=yes\n"
-            "Allow: /\n"
-            "\n"
-            "Sitemap: https://awesome-python.com/sitemap.xml\n"
-        )
+        assert robots == ("User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: https://awesome-python.com/sitemap.xml\n")
 
         sitemap = ET.parse(site / "sitemap.xml")
         root = sitemap.getroot()
         ns = {"sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-        locs = [loc.text for loc in root.findall("sitemap:url/sitemap:loc", ns)]
-        lastmods = [lastmod.text for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
+        locs = [loc.text or "" for loc in root.findall("sitemap:url/sitemap:loc", ns)]
+        lastmods = [lastmod.text or "" for lastmod in root.findall("sitemap:url/sitemap:lastmod", ns)]
 
         assert root.tag == "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset"
         assert locs == [
@@ -820,45 +801,61 @@ class TestLoadStars:
 # ---------------------------------------------------------------------------
 
 
+def _template_entry(name: str, stars: int | None, source_type: str | None = None) -> TemplateEntry:
+    return TemplateEntry(
+        name=name,
+        url="",
+        description="",
+        categories=[],
+        groups=[],
+        subcategories=[],
+        stars=stars,
+        owner=None,
+        last_commit_at=None,
+        source_type=source_type,
+        also_see=[],
+    )
+
+
 class TestSortEntries:
     def test_sorts_by_stars_descending(self):
         entries = [
-            {"name": "a", "stars": 100, "url": ""},
-            {"name": "b", "stars": 500, "url": ""},
-            {"name": "c", "stars": 200, "url": ""},
+            _template_entry("a", 100),
+            _template_entry("b", 500),
+            _template_entry("c", 200),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["b", "c", "a"]
 
     def test_equal_stars_sorted_alphabetically(self):
         entries = [
-            {"name": "beta", "stars": 100, "url": ""},
-            {"name": "alpha", "stars": 100, "url": ""},
+            _template_entry("beta", 100),
+            _template_entry("alpha", 100),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["alpha", "beta"]
 
     def test_no_stars_go_to_bottom(self):
         entries = [
-            {"name": "no-stars", "stars": None, "url": ""},
-            {"name": "has-stars", "stars": 50, "url": ""},
+            _template_entry("no-stars", None),
+            _template_entry("has-stars", 50),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["has-stars", "no-stars"]
 
     def test_no_stars_sorted_alphabetically(self):
         entries = [
-            {"name": "zebra", "stars": None, "url": ""},
-            {"name": "apple", "stars": None, "url": ""},
+            _template_entry("zebra", None),
+            _template_entry("apple", None),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["apple", "zebra"]
 
     def test_builtin_between_starred_and_unstarred(self):
         entries = [
-            {"name": "builtin", "stars": None, "source_type": "Built-in"},
-            {"name": "starred", "stars": 100, "source_type": None},
-            {"name": "unstarred", "stars": None, "source_type": None},
+            _template_entry("builtin", None, "Built-in"),
+            _template_entry("starred", 100),
+            _template_entry("unstarred", None),
         ]
         result = sort_entries(entries)
         assert [e["name"] for e in result] == ["starred", "builtin", "unstarred"]
@@ -1005,23 +1002,15 @@ class TestAnnotateEntriesWithStars:
     def test_appends_star_count_to_bullet(self):
         markdown = "- [foo](https://github.com/owner/foo) - A foo.\n"
         stars = {"owner/foo": {"stars": 123, "owner": "owner"}}
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "- [foo](https://github.com/owner/foo) - A foo. (123 GitHub stars)\n"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("- [foo](https://github.com/owner/foo) - A foo. (123 GitHub stars)\n")
 
     def test_uses_first_github_link(self):
-        markdown = (
-            "- [foo](https://github.com/owner/foo) - A foo. "
-            "Also [bar](https://github.com/owner/bar).\n"
-        )
+        markdown = "- [foo](https://github.com/owner/foo) - A foo. Also [bar](https://github.com/owner/bar).\n"
         stars = {
             "owner/foo": {"stars": 10, "owner": "owner"},
             "owner/bar": {"stars": 99, "owner": "owner"},
         }
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "- [foo](https://github.com/owner/foo) - A foo. "
-            "Also [bar](https://github.com/owner/bar). (10 GitHub stars)\n"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("- [foo](https://github.com/owner/foo) - A foo. Also [bar](https://github.com/owner/bar). (10 GitHub stars)\n")
 
     def test_skips_entries_without_star_data(self):
         markdown = "- [foo](https://github.com/owner/foo) - A foo.\n"
@@ -1040,13 +1029,9 @@ class TestAnnotateEntriesWithStars:
     def test_handles_indented_bullets(self):
         markdown = "    - [foo](https://github.com/owner/foo)\n"
         stars = {"owner/foo": {"stars": 7, "owner": "owner"}}
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "    - [foo](https://github.com/owner/foo) (7 GitHub stars)\n"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("    - [foo](https://github.com/owner/foo) (7 GitHub stars)\n")
 
     def test_preserves_lines_without_trailing_newline(self):
         markdown = "- [foo](https://github.com/owner/foo) - A foo."
         stars = {"owner/foo": {"stars": 5, "owner": "owner"}}
-        assert annotate_entries_with_stars(markdown, stars) == (
-            "- [foo](https://github.com/owner/foo) - A foo. (5 GitHub stars)"
-        )
+        assert annotate_entries_with_stars(markdown, stars) == ("- [foo](https://github.com/owner/foo) - A foo. (5 GitHub stars)")
