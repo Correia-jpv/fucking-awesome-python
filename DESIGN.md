@@ -1,3 +1,9 @@
+---
+version: alpha
+name: awesome-python.com
+description: Warm editorial Python index. Light cream canvas, brown-red interactive accent, Cormorant Garamond plus Manrope, table-driven single-page reference.
+---
+
 # awesome-python.com DESIGN.md
 
 awesome-python.com is a searchable, filterable index of ~650 curated Python projects. It is a reference tool, not a landing page and not a GitHub README mirror.
@@ -52,27 +58,29 @@ Design principles:
 
 Warm editorial palette. Light theme only (`color-scheme: light`). OKLCH only.
 
+Each token below shows the OKLCH value (canonical, lives in `style.css`) followed by an approximate hex sRGB equivalent for spec linters and any tool that expects hex.
+
 Surfaces:
 
-- `--bg-page` `oklch(96.8% 0.018 80)`. Cream/ivory canvas. The default page background.
-- `--bg-paper` `oklch(98.6% 0.01 80)`. Warm white for the content shell.
-- `--bg-paper-strong` `oklch(95.7% 0.016 76)`. Tinted paper for sponsor band, CTA backgrounds, static decoration.
-- `--hero-bg-start` → `--hero-bg-end` `oklch(14% 0.03 32)` → `oklch(28% 0.05 42)`. Dark earthy hero gradient.
-- `--footer-bg` `oklch(16% 0.025 35)`. Dark warm charcoal footer, part of the same system.
+- `--bg-page` `oklch(96.8% 0.018 80)` ≈ `#FBF3E7`. Cream/ivory canvas. The default page background.
+- `--bg-paper` `oklch(98.6% 0.01 80)` ≈ `#FEFAF3`. Warm white for the content shell.
+- `--bg-paper-strong` `oklch(95.7% 0.016 76)` ≈ `#F7F0E5`. Tinted paper for sponsor band, CTA backgrounds, static decoration.
+- `--hero-bg-start` `oklch(14% 0.03 32)` ≈ `#130503` to `--hero-bg-end` `oklch(28% 0.05 42)` ≈ `#3D2014`. Dark earthy hero gradient.
+- `--footer-bg` `oklch(16% 0.025 35)` ≈ `#170906`. Dark warm charcoal footer, part of the same system.
 
 Ink:
 
-- `--ink` `oklch(22% 0.02 55)`. Body text.
-- `--ink-soft` `oklch(38% 0.018 55)`. Secondary copy.
-- `--ink-muted` `oklch(52% 0.02 55)`. Meta rows, captions, static labels.
+- `--ink` `oklch(22% 0.02 55)` ≈ `#221812`. Body text.
+- `--ink-soft` `oklch(38% 0.018 55)` ≈ `#4A4039`. Secondary copy.
+- `--ink-muted` `oklch(52% 0.02 55)` ≈ `#72665E`. Meta rows, captions, static labels.
 - `--line` / `--line-strong`. Hairlines and dividers.
 
 Accent (warm brown-red, reserved for interactive):
 
-- `--accent` `oklch(58% 0.16 45)`. Primary accent.
-- `--accent-deep` `oklch(44% 0.15 42)`. Link text, hover.
-- `--accent-soft` `oklch(92% 0.045 55)`. Tinted background for filter tags.
-- `--accent-underline` `oklch(58% 0.16 45 / 0.4)`. Subtle text-decoration-color.
+- `--accent` `oklch(58% 0.16 45)` ≈ `#C4530F`. Primary accent.
+- `--accent-deep` `oklch(44% 0.15 42)` ≈ `#922900`. Link text, hover.
+- `--accent-soft` `oklch(92% 0.045 55)` ≈ `#FDDDC9`. Tinted background for filter tags.
+- `--accent-underline` `oklch(58% 0.16 45 / 0.4)` ≈ `#C4530F66`. Subtle text-decoration-color.
 
 Rules:
 
@@ -93,13 +101,15 @@ Pairing (do not swap):
 - **Display**: `Cormorant Garamond` (serif, 600 only).
 - **Body**: `Manrope` (sans, 400 / 600 / 700 / 800).
 
-Scale tokens (`:root`):
+Scale:
 
-- `--text-xs` `0.8rem` (12.8px). The smallest token. Pills, badges, tags, captions, footnotes.
-- `--text-sm` `0.95rem`. Meta rows, secondary copy.
-- `--text-base` `1rem` (16px). Body floor.
-- `--text-lg` `1.125rem`. Content-heavy passages.
-- Magazine-cover scale for the main headline: `clamp(4.5rem, 11vw, 8.5rem)`. Then a tight modular scale for the rest.
+| Role | Token | Size | Family | Weight | Notes |
+|---|---|---|---|---|---|
+| Hero headline | (literal `clamp`) | `clamp(4.5rem, 11vw, 8.5rem)` | Cormorant Garamond | 600 | Magazine-cover scale, single use on the hero |
+| Body large | `--text-lg` | `1.125rem` | Manrope | 400 | Content-heavy passages |
+| Body | `--text-base` | `1rem` (16px) | Manrope | 400 | Body floor, do not go smaller |
+| Meta / secondary | `--text-sm` | `0.95rem` | Manrope | 400 / 600 | Meta rows, secondary copy |
+| Caption / pill | `--text-xs` | `0.8rem` (12.8px) | Manrope | 600 / 700 | Smallest token, pills, badges, tags, footnotes |
 
 Hard-won sizing rules (do not relax):
 
@@ -189,6 +199,23 @@ The user actively tests `< 960px` and `< 680px`. Narrow screens must stay functi
 
 - Do not drop features the user might want (sort affordance, filter chips, sticky header where reasonable). Hiding is a last resort and requires justification.
 - Always run the `playwright-cli` skill at a narrow viewport after any layout change.
+
+## Iteration Guide
+
+Run this audit after generating or modifying a screen. Failure on any item means revise before moving on.
+
+1. **Width caps.** Inspect every section, card, paragraph, table cell, expanded row, CTA, sponsor description, hero subcopy. Only `.section-shell` (`--shell-max: 84rem`) may cap width. Anything else with a `max-width` is wrong.
+2. **Accent reservation.** Grep the changed CSS for `--accent`, `--accent-deep`, `--accent-soft`. Each match must back an interactive element (link, button, focus ring, filter tag). Static decoration must use `--ink-muted`, `--ink-soft`, or `--bg-paper-strong`.
+3. **Shape language.** Containers are square or pill. Anything in the 4px-to-16px radius range is suspect. The lone `0.4rem` callout is the only allowed exception.
+4. **Type sizes.** Confirm no rendered text falls below 12px. If a size feels small to a mid-senior reader on a 27-inch display, bump one step up. Never reduce an existing size.
+5. **Peer consistency.** Compare against the closest peer element (sibling link type, sibling tag variant, sibling label). Hover, focus, color token, and gutter must match unless there is a stated reason to differ.
+6. **Narrow viewport.** Run the `playwright-cli` skill at `< 960px` and `< 680px`. Sort affordance, filter chips, and sticky header must remain functional.
+
+## Known Gaps
+
+- **Color format diverges from the Stitch spec.** The official linter requires hex sRGB (`/^#([0-9a-fA-F]{3,8})$/`). The project mandates OKLCH in `style.css`. The Colors section above resolves this by showing both: OKLCH is canonical, hex is the linter-friendly approximation.
+- **YAML frontmatter is minimal.** Only `version`, `name`, and `description` are encoded. The project has no JSON / Figma export pipeline that would consume token-level frontmatter, so the prose-led format is preferred for everything else.
+- **No formal spacing or radius scale.** The codebase uses `clamp()` and ad-hoc rem values rather than a tokenized scale. Adding one would be invention, not documentation.
 
 ## Verification
 
