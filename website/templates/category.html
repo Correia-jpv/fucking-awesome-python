@@ -176,7 +176,11 @@
             </button>
             {% endif %}
             {% if entry.source_type == 'Built-in' %}
-            <button class="tag tag-source" data-value="Built-in">
+            <button
+              class="tag tag-source{% if '/categories/built-in/' == current_path %} active{% endif %}"
+              data-value="Built-in"
+              data-url="/categories/built-in/"
+            >
               Built-in
             </button>
             {% endif %}

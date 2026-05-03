@@ -20,6 +20,11 @@ SITE_URL = "https://awesome-python.com/"
 SITEMAP_URL = f"{SITE_URL}sitemap.xml"
 SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 
+BUILTIN_FILTER = "Built-in"
+BUILTIN_SLUG = "built-in"
+BUILTIN_PATH = f"/categories/{BUILTIN_SLUG}/"
+BUILTIN_PUBLIC_URL = f"{SITE_URL}categories/{BUILTIN_SLUG}/"
+
 SOURCE_TYPE_DOMAINS = {
     "docs.python.org": "Built-in",
     "gitlab.com": "GitLab",
@@ -287,7 +292,7 @@ def build(repo_root: Path) -> None:
     categories = [cat for g in parsed_groups for cat in g["categories"]]
     cat_slugs = [cat["slug"] for cat in categories]
     group_slugs = [g["slug"] for g in parsed_groups]
-    all_top_level_slugs = cat_slugs + group_slugs
+    all_top_level_slugs = cat_slugs + group_slugs + [BUILTIN_SLUG]
     duplicates = {s for s in all_top_level_slugs if all_top_level_slugs.count(s) > 1}
     if duplicates:
         raise ValueError(
@@ -325,6 +330,9 @@ def build(repo_root: Path) -> None:
     for entry in entries:
         for sub in entry.get("subcategories", []):
             filter_urls[sub["value"]] = sub["url"]
+    builtin_entries = [e for e in entries if e.get("source_type") == BUILTIN_FILTER]
+    if builtin_entries:
+        filter_urls[BUILTIN_FILTER] = BUILTIN_PATH
 
     env = Environment(
         loader=FileSystemLoader(website / "templates"),
@@ -402,6 +410,29 @@ def build(repo_root: Path) -> None:
             encoding="utf-8",
         )
 
+    if builtin_entries:
+        page_dir = categories_dir / BUILTIN_SLUG
+        page_dir.mkdir(parents=True, exist_ok=True)
+        synthetic = {
+            "name": BUILTIN_FILTER,
+            "slug": BUILTIN_SLUG,
+            "description": "",
+            "description_html": "",
+        }
+        (page_dir / "index.html").write_text(
+            tpl_category.render(
+                category=synthetic,
+                category_url=BUILTIN_PUBLIC_URL,
+                entries=builtin_entries,
+                total_categories=len(categories),
+                page_kind="built-in",
+                category_urls=category_urls,
+                current_path=BUILTIN_PATH,
+                filter_urls_json=filter_urls_json,
+            ),
+            encoding="utf-8",
+        )
+
     seen_subcats: set[tuple[str, str]] = set()
     for category in categories:
         cat_url_prefix = f"/categories/{category['slug']}/"
@@ -455,6 +486,8 @@ def build(repo_root: Path) -> None:
     sitemap_urls = [(SITE_URL, sitemap_date)]
     sitemap_urls.extend((category_public_url(c), sitemap_date) for c in categories)
     sitemap_urls.extend((group_public_url(g["slug"]), sitemap_date) for g in parsed_groups)
+    if builtin_entries:
+        sitemap_urls.append((BUILTIN_PUBLIC_URL, sitemap_date))
     for cat_slug, sub_slug in sorted(seen_subcats):
         sitemap_urls.append((subcategory_public_url(cat_slug, sub_slug), sitemap_date))
     write_sitemap_xml(site_dir / "sitemap.xml", sitemap_urls)
