@@ -129,6 +129,12 @@ class TestBuild:
             "{% endblock %}",
             encoding="utf-8",
         )
+        (tpl_dir / "sponsorship.html").write_text(
+            '{% extends "base.html" %}{% block content %}'
+            "<h1>Sponsor</h1>"
+            "{% endblock %}",
+            encoding="utf-8",
+        )
         (tpl_dir / "llms.txt").write_text(
             "# Awesome Python\n"
             "\n"
@@ -234,6 +240,7 @@ class TestBuild:
             "https://awesome-python.com/categories/widgets/",
             "https://awesome-python.com/categories/tools/",
             "https://awesome-python.com/categories/widgets/sync/",
+            "https://awesome-python.com/sponsorship/",
         ]
         assert len(lastmods) == len(locs)
         assert all(start_date <= date.fromisoformat(lastmod) <= end_date for lastmod in lastmods)

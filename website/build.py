@@ -25,6 +25,9 @@ BUILTIN_SLUG = "built-in"
 BUILTIN_PATH = f"/categories/{BUILTIN_SLUG}/"
 BUILTIN_PUBLIC_URL = f"{SITE_URL}categories/{BUILTIN_SLUG}/"
 
+SPONSORSHIP_PATH = "/sponsorship/"
+SPONSORSHIP_PUBLIC_URL = f"{SITE_URL}sponsorship/"
+
 SOURCE_TYPE_DOMAINS = {
     "docs.python.org": "Built-in",
     "gitlab.com": "GitLab",
@@ -434,6 +437,23 @@ def build(repo_root: Path) -> None:
             encoding="utf-8",
         )
 
+    sponsorship_dir = site_dir / "sponsorship"
+    sponsorship_dir.mkdir(parents=True, exist_ok=True)
+    tpl_sponsorship = env.get_template("sponsorship.html")
+    hero_stats: list[str] = []
+    if repo_stars:
+        hero_stats.append(f"{repo_stars}+ stars on GitHub")
+    hero_stats.append(f"{total_entries}+ curated projects")
+    hero_stats.append(f"Updated {build_date.strftime('%B %d, %Y')}")
+    (sponsorship_dir / "index.html").write_text(
+        tpl_sponsorship.render(
+            total_entries=total_entries,
+            total_categories=len(categories),
+            hero_stats=hero_stats,
+        ),
+        encoding="utf-8",
+    )
+
     seen_subcats: set[tuple[str, str]] = set()
     for category in categories:
         cat_url_prefix = f"/categories/{category['slug']}/"
@@ -491,6 +511,7 @@ def build(repo_root: Path) -> None:
         sitemap_urls.append((BUILTIN_PUBLIC_URL, sitemap_date))
     for cat_slug, sub_slug in sorted(seen_subcats):
         sitemap_urls.append((subcategory_public_url(cat_slug, sub_slug), sitemap_date))
+    sitemap_urls.append((SPONSORSHIP_PUBLIC_URL, sitemap_date))
     write_sitemap_xml(site_dir / "sitemap.xml", sitemap_urls)
     (site_dir / "index.md").write_text(markdown_index, encoding="utf-8")
     (site_dir / "llms.txt").write_text(llms_txt, encoding="utf-8")
