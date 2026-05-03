@@ -1483,8 +1483,8 @@ th[data-sort].sort-asc::after {
 
 .footer-left {
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .footer-brand {
