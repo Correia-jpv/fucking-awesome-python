@@ -406,6 +406,7 @@ def build(repo_root: Path) -> None:
                 category_urls=category_urls,
                 current_path=group_path(group["slug"]),
                 filter_urls_json=filter_urls_json,
+                group_categories=group["categories"],
             ),
             encoding="utf-8",
         )

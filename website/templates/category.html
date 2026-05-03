@@ -34,6 +34,23 @@
       <p class="category-subtitle">{{ category.description_html | safe }}</p>
       {% endif %}
     </div>
+
+    {% if group_categories %}
+    <nav class="hero-category-nav" aria-labelledby="hero-category-heading">
+      <div class="hero-category-meta">
+        <h2 id="hero-category-heading">Browse by category</h2>
+      </div>
+      <ul class="hero-category-links">
+        {% for sub in group_categories %}
+        <li>
+          <a class="hero-category-link" href="{{ category_urls[sub.name] }}"
+            >{{ sub.name }}</a
+          >
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+    {% endif %}
   </div>
 </header>
 {% endblock %}
