@@ -511,41 +511,6 @@ kbd {
   justify-self: start;
 }
 
-.category-table .col-name {
-  width: min(42rem, 48vw);
-  white-space: normal;
-}
-
-.category-table .col-name > a {
-  display: inline-block;
-}
-
-.category-row-desc {
-  display: block;
-  max-width: 68ch;
-  margin-top: 0.32rem;
-  color: var(--ink-soft);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  line-height: 1.55;
-  text-wrap: pretty;
-}
-
-.category-row-desc a {
-  color: var(--accent-deep);
-  text-decoration: underline;
-  text-decoration-color: var(--accent-underline);
-  text-underline-offset: 0.18em;
-}
-
-.category-row-desc a:hover {
-  color: var(--accent);
-}
-
-.category-table .expand-content {
-  padding-block: 0.25rem 0.15rem;
-}
-
 .sponsor-band {
   padding-block: clamp(2.5rem, 5.5vw, 4rem);
   background:

@@ -86,9 +86,6 @@
             <a href="{{ entry.url }}" target="_blank" rel="noopener"
               >{{ entry.name }}</a
             >
-            {% if entry.description %}
-            <span class="category-row-desc">{{ entry.description | safe }}</span>
-            {% endif %}
             <span class="mobile-cat"
               >{% if entry.subcategories %}{{ entry.subcategories[0].name }}{%
               else %}{{ category.name }}{% endif %}</span
@@ -152,7 +149,9 @@
           <td></td>
           <td colspan="4">
             <div class="expand-content">
-              {% if entry.also_see %}
+              {% if entry.description %}
+              <div class="expand-desc">{{ entry.description | safe }}</div>
+              {% endif %} {% if entry.also_see %}
               <div class="expand-also-see">
                 Also see: {% for see in entry.also_see %}<a
                   href="{{ see.url }}"
