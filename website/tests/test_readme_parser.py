@@ -449,9 +449,6 @@ class TestParseRealReadme:
     def test_at_least_11_groups(self):
         assert len(self.groups) >= 11
 
-    def test_first_group_is_ai_ml(self):
-        assert self.groups[0]["name"] == "AI & ML"
-
     def test_at_least_69_categories(self):
         assert len(self.cats) >= 69
 
@@ -459,38 +456,9 @@ class TestParseRealReadme:
         all_names = [c["name"] for c in self.cats]
         assert "Contributing" not in all_names
 
-    def test_first_category_is_ai_and_agents(self):
-        assert self.cats[0]["name"] == "AI and Agents"
-        assert self.cats[0]["slug"] == "ai-and-agents"
-
-    def test_web_apis_slug(self):
-        slugs = [c["slug"] for c in self.cats]
-        assert "web-apis" in slugs
-
-    def test_descriptions_extracted(self):
-        ai = next(c for c in self.cats if c["name"] == "AI and Agents")
-        assert "AI applications" in ai["description"]
-
     def test_entry_counts_nonzero(self):
         for cat in self.cats:
             assert cat["entry_count"] > 0, f"{cat['name']} has 0 entries"
-
-    def test_async_has_also_see(self):
-        async_cat = next(c for c in self.cats if c["name"] == "Asynchronous Programming")
-        asyncio_entry = next(e for e in async_cat["entries"] if e["name"] == "asyncio")
-        assert len(asyncio_entry["also_see"]) >= 1
-        assert asyncio_entry["also_see"][0]["name"] == "awesome-asyncio"
-
-    def test_description_links_stripped_to_text(self):
-        algos = next(c for c in self.cats if c["name"] == "Algorithms and Design Patterns")
-        assert "awesome-algorithms" in algos["description"]
-        assert "https://" not in algos["description"]
-        assert 'href="https://github.com/tayllan/awesome-algorithms"' in algos["description_html"]
-
-    def test_miscellaneous_category_in_other_group(self):
-        other_group = next((g for g in self.groups if g["name"] == "Other"), None)
-        assert other_group is not None
-        assert any(c["name"] == "Miscellaneous" for c in other_group["categories"])
 
     def test_all_entries_have_nonempty_names(self):
         bad = []

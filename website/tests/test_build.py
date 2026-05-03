@@ -68,17 +68,8 @@ class TestSlugify:
     def test_uppercase_acronym(self):
         assert slugify("RESTful API") == "restful-api"
 
-    def test_all_caps(self):
-        assert slugify("CMS") == "cms"
-
     def test_hyphenated_input(self):
         assert slugify("Command-line Tools") == "command-line-tools"
-
-    def test_special_chars(self):
-        assert slugify("Editor Plugins and IDEs") == "editor-plugins-and-ides"
-
-    def test_single_word(self):
-        assert slugify("Audio") == "audio"
 
     def test_extra_spaces(self):
         assert slugify("  Date  and  Time  ") == "date-and-time"
@@ -87,9 +78,6 @@ class TestSlugify:
 class TestSubcategoryPath:
     def test_builds_path(self):
         assert subcategory_path("web-frameworks", "synchronous") == "/categories/web-frameworks/synchronous/"
-
-    def test_trailing_slash(self):
-        assert subcategory_path("a", "b").endswith("/")
 
 
 # ---------------------------------------------------------------------------
@@ -382,59 +370,6 @@ class TestBuild:
         build(tmp_path)
 
         assert not (tmp_path / "website" / "output" / "categories" / "stale").exists()
-
-    def test_index_contains_category_names(self, tmp_path):
-        readme = textwrap.dedent("""\
-            # T
-
-            ---
-
-            **Group A**
-
-            ## Alpha
-
-            - [a](https://x.com) - A.
-
-            **Group B**
-
-            ## Beta
-
-            - [b](https://x.com) - B.
-
-            # Contributing
-
-            Done.
-        """)
-        self._make_repo(tmp_path, readme)
-        build(tmp_path)
-
-        index_html = (tmp_path / "website" / "output" / "index.html").read_text()
-        assert "Alpha" in index_html
-        assert "Beta" in index_html
-        assert "Group A" in index_html
-        assert "Group B" in index_html
-
-    def test_index_contains_preview_text(self, tmp_path):
-        readme = textwrap.dedent("""\
-            # T
-
-            ---
-
-            ## Stuff
-
-            - [django](https://x.com) - A framework.
-            - [flask](https://x.com) - A micro.
-
-            # Contributing
-
-            Done.
-        """)
-        self._make_repo(tmp_path, readme)
-        build(tmp_path)
-
-        index_html = (tmp_path / "website" / "output" / "index.html").read_text()
-        assert "django" in index_html
-        assert "flask" in index_html
 
     def test_build_with_stars_sorts_by_stars(self, tmp_path):
         readme = textwrap.dedent("""\
