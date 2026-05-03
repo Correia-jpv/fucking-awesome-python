@@ -3,6 +3,9 @@
 {% block description %}Explore {{ entries | length }} curated Python projects in {{ category.name }}. {% if category.description %}{{ category.description }}{% else %}Part of the Awesome Python catalog.{% endif %}{% endblock %}
 {% block canonical_url %}{{ category_url }}{% endblock %}
 {% block alternate_links %}{% endblock %}
+{% block extra_head %}
+<script type="application/ld+json">{{ category_json_ld | safe }}</script>
+{% endblock %}
 {% block header %}
 <header class="category-hero">
   <div class="hero-sheen" aria-hidden="true"></div>

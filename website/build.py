@@ -118,14 +118,11 @@ def build_robots_txt() -> str:
     return f"User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: {SITEMAP_URL}\n"
 
 
-def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: int) -> dict:
-    description = (
-        "An opinionated guide to the best Python frameworks, libraries, and tools. "
-        f"Explore {len(entries)} curated projects across {total_categories} categories, "
-        "from AI and agents to data science and web development."
-    )
-    website_id = f"{SITE_URL}#website"
-    item_list = {
+WEBSITE_ID = f"{SITE_URL}#website"
+
+
+def _item_list_payload(entries: Sequence[TemplateEntry]) -> dict:
+    return {
         "@type": "ItemList",
         "numberOfItems": len(entries),
         "itemListElement": [
@@ -138,12 +135,20 @@ def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: i
             for i, entry in enumerate(entries, start=1)
         ],
     }
+
+
+def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: int) -> dict:
+    description = (
+        "An opinionated guide to the best Python frameworks, libraries, and tools. "
+        f"Explore {len(entries)} curated projects across {total_categories} categories, "
+        "from AI and agents to data science and web development."
+    )
     return {
         "@context": "https://schema.org",
         "@graph": [
             {
                 "@type": "WebSite",
-                "@id": website_id,
+                "@id": WEBSITE_ID,
                 "name": "Awesome Python",
                 "url": SITE_URL,
             },
@@ -153,10 +158,27 @@ def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: i
                 "name": "Awesome Python",
                 "url": SITE_URL,
                 "description": description,
-                "isPartOf": {"@id": website_id},
-                "mainEntity": item_list,
+                "isPartOf": {"@id": WEBSITE_ID},
+                "mainEntity": _item_list_payload(entries),
             },
         ],
+    }
+
+
+def category_meta_description(name: str, entry_count: int, description: str) -> str:
+    suffix = description if description else "Part of the Awesome Python catalog."
+    return f"Explore {entry_count} curated Python projects in {name}. {suffix}"
+
+
+def build_category_json_ld(name: str, url: str, description: str, entries: Sequence[TemplateEntry]) -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": f"{name} Python Libraries",
+        "url": url,
+        "description": description,
+        "isPartOf": {"@id": WEBSITE_ID},
+        "mainEntity": _item_list_payload(entries),
     }
 
 
@@ -458,6 +480,15 @@ def build(repo_root: Path) -> None:
         group_categories: Sequence[ParsedSection] | None = None,
     ) -> None:
         page_dir.mkdir(parents=True, exist_ok=True)
+        category_description = category_meta_description(
+            category["name"], len(entries), category["description"]
+        )
+        category_json_ld = json.dumps(
+            build_category_json_ld(
+                category["name"], category_url, category_description, entries
+            ),
+            ensure_ascii=False,
+        ).replace("</", "<\\/")
         (page_dir / "index.html").write_text(
             tpl_category.render(
                 category=category,
@@ -470,6 +501,7 @@ def build(repo_root: Path) -> None:
                 filter_urls_json=filter_urls_json,
                 parent_category=parent_category,
                 group_categories=group_categories,
+                category_json_ld=category_json_ld,
             ),
             encoding="utf-8",
         )
