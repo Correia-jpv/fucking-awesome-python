@@ -204,13 +204,19 @@
           </td>
           <td class="col-arrow"><span class="arrow">&rarr;</span></td>
         </tr>
+        {% if entry.description %}
+        <tr class="desc-row" aria-hidden="true">
+          <td class="col-num"></td>
+          <td colspan="5">
+            <div class="desc-text">{{ entry.description | safe }}</div>
+          </td>
+        </tr>
+        {% endif %}
         <tr class="expand-row" id="expand-{{ loop.index }}">
           <td></td>
           <td colspan="4">
             <div class="expand-content">
-              {% if entry.description %}
-              <div class="expand-desc">{{ entry.description | safe }}</div>
-              {% endif %} {% if entry.also_see %}
+              {% if entry.also_see %}
               <div class="expand-also-see">
                 Also see: {% for see in entry.also_see %}<a
                   href="{{ see.url }}"

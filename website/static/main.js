@@ -113,7 +113,12 @@ document
 
 rows.forEach(function (row, i) {
   row._origIndex = i;
-  row._expandRow = row.nextElementSibling;
+  let next = row.nextElementSibling;
+  if (next && next.classList.contains("desc-row")) {
+    row._descRow = next;
+    next = next.nextElementSibling;
+  }
+  row._expandRow = next;
 });
 
 function collapseAll() {
@@ -142,9 +147,11 @@ function applyFilters() {
     if (show && query) {
       if (!row._searchText) {
         let text = row.textContent.toLowerCase();
-        const next = row.nextElementSibling;
-        if (next && next.classList.contains("expand-row")) {
-          text += " " + next.textContent.toLowerCase();
+        if (row._descRow) {
+          text += " " + row._descRow.textContent.toLowerCase();
+        }
+        if (row._expandRow) {
+          text += " " + row._expandRow.textContent.toLowerCase();
         }
         row._searchText = text;
       }
@@ -152,6 +159,9 @@ function applyFilters() {
     }
 
     if (row.hidden !== !show) row.hidden = !show;
+    if (row._descRow && row._descRow.hidden !== !show) {
+      row._descRow.hidden = !show;
+    }
 
     if (show) {
       visibleCount++;
@@ -262,7 +272,8 @@ function sortRows() {
   const frag = document.createDocumentFragment();
   arr.forEach(function (row) {
     frag.appendChild(row);
-    frag.appendChild(row._expandRow);
+    if (row._descRow) frag.appendChild(row._descRow);
+    if (row._expandRow) frag.appendChild(row._expandRow);
   });
   tbody.appendChild(frag);
   applyFilters();
@@ -291,7 +302,11 @@ if (tbody) {
     // Don't toggle if clicking a link or tag button
     if (e.target.closest("a") || e.target.closest(".tag")) return;
 
-    const row = e.target.closest("tr.row");
+    let row = e.target.closest("tr.row");
+    if (!row) {
+      const descRow = e.target.closest("tr.desc-row");
+      if (descRow) row = descRow.previousElementSibling;
+    }
     if (!row) return;
 
     const isOpen = row.classList.contains("open");
