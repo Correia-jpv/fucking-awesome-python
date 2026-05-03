@@ -437,7 +437,6 @@ def build(repo_root: Path) -> None:
     hero_stats: list[str] = []
     if repo_stars:
         hero_stats.append(f"{repo_stars}+ stars on GitHub")
-    hero_stats.append(f"{total_entries}+ curated projects")
     hero_stats.append(f"Updated {build_date.strftime('%B %d, %Y')}")
     (sponsorship_dir / "index.html").write_text(
         tpl_sponsorship.render(hero_stats=hero_stats),
