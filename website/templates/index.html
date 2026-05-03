@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block extra_head %}
+<script type="application/ld+json">{{ homepage_json_ld | safe }}</script>
+{% endblock %}
 {% block header %}
 <header class="hero">
   <div class="hero-sheen" aria-hidden="true"></div>
@@ -220,9 +223,9 @@
           </td>
           <td class="col-cat">
             {% for subcat in entry.subcategories %}
-            <button class="tag" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
+            <a class="tag" href="{{ subcat.url }}" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
               {{ subcat.name }}
-            </button>
+            </a>
             {% endfor %} {% for cat in entry.categories %}
             <a
               class="tag"
@@ -232,25 +235,35 @@
               >{{ cat }}</a
             >
             {% endfor %}
-            <button
+            <a
               class="tag tag-group"
+              href="{{ filter_urls[entry.groups[0]] }}"
               data-value="{{ entry.groups[0] }}"
               data-url="{{ filter_urls[entry.groups[0]] }}"
             >
               {{ entry.groups[0] }}
-            </button>
+            </a>
             {% if entry.source_type == 'Built-in' %}
-            <button
+            <a
               class="tag tag-source"
+              href="/categories/built-in/"
               data-value="Built-in"
               data-url="/categories/built-in/"
             >
               Built-in
-            </button>
+            </a>
             {% endif %}
           </td>
           <td class="col-arrow"><span class="arrow">&rarr;</span></td>
         </tr>
+        {% if entry.description %}
+        <tr class="desc-row" aria-hidden="true" hidden>
+          <td class="col-num"></td>
+          <td colspan="5">
+            <div class="desc-text">{{ entry.description | safe }}</div>
+          </td>
+        </tr>
+        {% endif %}
         <tr class="expand-row" id="expand-{{ loop.index }}">
           <td></td>
           <td colspan="4">

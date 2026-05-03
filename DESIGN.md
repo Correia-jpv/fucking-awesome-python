@@ -75,6 +75,7 @@ Layout and sizing:
 - The impeccable skill reference rule "cap line length at ~65-75ch" does NOT apply here. Ignore it. Readability at wide widths is carried by vertical rhythm, leading, and the modular type scale instead.
 - If you believe a width cap is actually necessary for some specific element, ask first with a concrete reason before adding it.
 - Body type floor is 16px (`--text-base: 1rem`). Content-heavy passages may go to 1.125rem.
+- Absolute minimum font size is 12px (`0.75rem`) for ANY text, including pills, badges, tags, captions, footnotes. Anything smaller hits Chrome's default minimum-font-size floor and renders inconsistently across browsers and user accessibility settings. Use `var(--text-xs)` (`0.8rem`) as the smallest token.
 - When in doubt about any type size, pick one step larger than what the impeccable skill's scale references suggest. The user has repeatedly corrected sizes upward (11+ separate requests across 8 sessions). Never reduce an existing size unprompted. Footer, meta rows, expand content, labels, headings all trend too small by default.
 - Row numbers in the table: left-align, no leading zeros. The user tried zero-padding and rejected it.
 - Adjacent heading levels differ by at least 0.25rem of rendered size.

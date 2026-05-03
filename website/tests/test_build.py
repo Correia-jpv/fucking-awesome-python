@@ -268,8 +268,8 @@ class TestBuild:
 
         assert 'href="/categories/widgets/"' in index_html
         assert 'data-value="Widgets"' in index_html
-        assert parser.title.strip() == "Widgets Python Libraries | Awesome Python"
-        assert parser.meta_by_name["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries. Also see awesome-widgets."
+        assert parser.title.strip() == "Widgets Python Libraries - Awesome Python"
+        assert parser.meta_by_name["description"] == "Widget libraries. Also see awesome-widgets. Explore 2 curated Python projects in Widgets."
         assert parser.links_by_rel["canonical"] == "https://awesome-python.com/categories/widgets/"
         assert parser.meta_by_property["og:url"] == "https://awesome-python.com/categories/widgets/"
         assert '<link rel="alternate" type="text/markdown" href="/index.md" />' not in category_html
@@ -470,6 +470,143 @@ class TestBuild:
         assert "<head>\n    <meta charset" in html
         assert 'id="hero-category-heading">Browse by category</h2>' in html
         assert 'class="hero-category-link" href="/categories/ai-and-agents/"' in html
+
+    def test_index_contains_homepage_json_ld(self, tmp_path):
+        readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+
+        build(tmp_path)
+
+        parsed_groups = parse_readme(readme)
+        categories = [cat for group in parsed_groups for cat in group["categories"]]
+        entries = extract_entries(categories, parsed_groups)
+        html = (tmp_path / "website" / "output" / "index.html").read_text(encoding="utf-8")
+
+        marker = '<script type="application/ld+json">'
+        assert marker in html
+        start = html.index(marker) + len(marker)
+        end = html.index("</script>", start)
+        block = html[start:end]
+        assert "</script>" not in block
+        data = json.loads(block)
+
+        assert data["@context"] == "https://schema.org"
+        graph = {node["@type"]: node for node in data["@graph"]}
+        assert set(graph) == {"WebSite", "CollectionPage"}
+        assert graph["WebSite"]["url"] == "https://awesome-python.com/"
+        assert graph["WebSite"]["name"] == "Awesome Python"
+        assert graph["WebSite"]["@id"] == "https://awesome-python.com/#website"
+
+        collection = graph["CollectionPage"]
+        assert collection["@id"] == "https://awesome-python.com/"
+        assert collection["url"] == "https://awesome-python.com/"
+        assert collection["isPartOf"] == {"@type": "WebSite", "@id": graph["WebSite"]["@id"]}
+        expected_description = f"An opinionated guide to the best Python frameworks, libraries, and tools. Explore {len(entries)} curated projects across {len(categories)} categories, from AI and agents to data science and web development."
+        assert collection["description"] == expected_description
+
+        item_list = collection["mainEntity"]
+        assert item_list["@type"] == "ItemList"
+        assert item_list["numberOfItems"] == len(entries)
+        assert len(item_list["itemListElement"]) == len(entries)
+
+        positions = [item["position"] for item in item_list["itemListElement"]]
+        assert positions == list(range(1, len(entries) + 1))
+        assert all(item["@type"] == "ListItem" for item in item_list["itemListElement"])
+        assert all(item["url"].startswith(("http://", "https://")) for item in item_list["itemListElement"])
+
+        rendered_names = {item["name"] for item in item_list["itemListElement"]}
+        rendered_urls = {item["url"] for item in item_list["itemListElement"]}
+        assert rendered_names == {e["name"] for e in entries}
+        assert rendered_urls == {e["url"] for e in entries}
+
+    def test_category_page_contains_json_ld(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # Awesome Python
+
+            Intro.
+
+            ---
+
+            **Tools**
+
+            ## Widgets
+
+            _Widget libraries._
+
+            - [w1](https://example.com/w1) - A widget.
+            - [w2](https://github.com/owner/w2) - A starred widget.
+
+            # Contributing
+
+            Help!
+        """)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        self._copy_real_templates(tmp_path)
+        build(tmp_path)
+
+        category_html = (tmp_path / "website" / "output" / "categories" / "widgets" / "index.html").read_text(encoding="utf-8")
+        marker = '<script type="application/ld+json">'
+        assert marker in category_html
+        start = category_html.index(marker) + len(marker)
+        end = category_html.index("</script>", start)
+        block = category_html[start:end]
+        assert "</script>" not in block
+        data = json.loads(block)
+
+        assert data["@context"] == "https://schema.org"
+        graph = {node["@type"]: node for node in data["@graph"]}
+        assert set(graph) == {"WebSite", "CollectionPage"}
+        assert graph["WebSite"]["@id"] == "https://awesome-python.com/#website"
+        collection = graph["CollectionPage"]
+        assert collection["name"] == "Widgets Python Libraries"
+        assert collection["@id"] == "https://awesome-python.com/categories/widgets/"
+        assert collection["url"] == "https://awesome-python.com/categories/widgets/"
+        assert collection["description"] == "Widget libraries. Explore 2 curated Python projects in Widgets."
+        assert collection["isPartOf"] == {"@type": "WebSite", "@id": "https://awesome-python.com/#website"}
+
+        item_list = collection["mainEntity"]
+        assert item_list["@type"] == "ItemList"
+        assert item_list["numberOfItems"] == 2
+        names = {item["name"] for item in item_list["itemListElement"]}
+        urls = {item["url"] for item in item_list["itemListElement"]}
+        assert names == {"w1", "w2"}
+        assert urls == {"https://example.com/w1", "https://github.com/owner/w2"}
+        positions = sorted(item["position"] for item in item_list["itemListElement"])
+        assert positions == [1, 2]
+
+    def test_group_page_falls_back_to_default_description_in_json_ld(self, tmp_path):
+        readme = textwrap.dedent("""\
+            # T
+
+            ---
+
+            **AI & ML**
+
+            ## Deep Learning
+
+            - [dl1](https://example.com/dl1) - DL.
+
+            # Contributing
+
+            Done.
+        """)
+        self._copy_real_templates(tmp_path)
+        (tmp_path / "README.md").write_text(readme, encoding="utf-8")
+        build(tmp_path)
+
+        group_html = (tmp_path / "website" / "output" / "categories" / "ai-ml" / "index.html").read_text(encoding="utf-8")
+        marker = '<script type="application/ld+json">'
+        start = group_html.index(marker) + len(marker)
+        end = group_html.index("</script>", start)
+        data = json.loads(group_html[start:end])
+
+        graph = {node["@type"]: node for node in data["@graph"]}
+        collection = graph["CollectionPage"]
+        assert collection["name"] == "AI & ML Python Libraries"
+        assert collection["@id"] == "https://awesome-python.com/categories/ai-ml/"
+        assert collection["url"] == "https://awesome-python.com/categories/ai-ml/"
+        assert collection["description"] == "Explore 1 curated Python projects in AI & ML. Part of the Awesome Python catalog."
 
     def test_build_creates_subcategory_pages(self, tmp_path):
         readme = textwrap.dedent("""\

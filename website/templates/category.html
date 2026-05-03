@@ -1,8 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ category.name }} Python Libraries | Awesome Python{% endblock %}
-{% block description %}Explore {{ entries | length }} curated Python projects in {{ category.name }}. {% if category.description %}{{ category.description }}{% else %}Part of the Awesome Python catalog.{% endif %}{% endblock %}
+{% block title %}{{ category.name }} Python Libraries - Awesome Python{% endblock %}
+{% block description %}{{ category_description }}{% endblock %}
 {% block canonical_url %}{{ category_url }}{% endblock %}
 {% block alternate_links %}{% endblock %}
+{% block extra_head %}
+<script type="application/ld+json">{{ category_json_ld | safe }}</script>
+{% endblock %}
 {% block header %}
 <header class="category-hero">
   <div class="hero-sheen" aria-hidden="true"></div>
@@ -169,9 +172,9 @@
           </td>
           <td class="col-cat">
             {% for subcat in entry.subcategories %}
-            <button class="tag{% if subcat.url == current_path %} active{% endif %}" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
+            <a class="tag{% if subcat.url == current_path %} active{% endif %}" href="{{ subcat.url }}" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
               {{ subcat.name }}
-            </button>
+            </a>
             {% endfor %}
             {% for cat in entry.categories %}
             <a
@@ -184,33 +187,41 @@
             {% endfor %}
             {% if entry.groups %}
             {% set group_url = filter_urls[entry.groups[0]] %}
-            <button
+            <a
               class="tag tag-group{% if group_url == current_path %} active{% endif %}"
+              href="{{ group_url }}"
               data-value="{{ entry.groups[0] }}"
               data-url="{{ group_url }}"
             >
               {{ entry.groups[0] }}
-            </button>
+            </a>
             {% endif %}
             {% if entry.source_type == 'Built-in' %}
-            <button
+            <a
               class="tag tag-source{% if '/categories/built-in/' == current_path %} active{% endif %}"
+              href="/categories/built-in/"
               data-value="Built-in"
               data-url="/categories/built-in/"
             >
               Built-in
-            </button>
+            </a>
             {% endif %}
           </td>
           <td class="col-arrow"><span class="arrow">&rarr;</span></td>
         </tr>
+        {% if entry.description %}
+        <tr class="desc-row" aria-hidden="true">
+          <td class="col-num"></td>
+          <td colspan="5">
+            <div class="desc-text">{{ entry.description | safe }}</div>
+          </td>
+        </tr>
+        {% endif %}
         <tr class="expand-row" id="expand-{{ loop.index }}">
           <td></td>
           <td colspan="4">
             <div class="expand-content">
-              {% if entry.description %}
-              <div class="expand-desc">{{ entry.description | safe }}</div>
-              {% endif %} {% if entry.also_see %}
+              {% if entry.also_see %}
               <div class="expand-also-see">
                 Also see: {% for see in entry.also_see %}<a
                   href="{{ see.url }}"

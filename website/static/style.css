@@ -788,6 +788,11 @@ kbd {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
+.row:has(+ .desc-row:not([hidden])) td {
+  border-bottom-color: transparent;
+  padding-bottom: 0.35rem;
+}
+
 .row.open td {
   background: linear-gradient(180deg, var(--row-open-start), var(--row-open-end));
   border-bottom-color: transparent;
@@ -919,12 +924,64 @@ th[data-sort].sort-asc::after {
   transform: rotate(90deg);
 }
 
+.desc-row td {
+  padding-top: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.row:not(.open) + .desc-row td {
+  border-bottom: 1px solid var(--line);
+}
+
+.row + .desc-row {
+  cursor: pointer;
+}
+
+.row:not(.open):hover td,
+.row:not(.open):hover + .desc-row td {
+  background: var(--row-hover);
+}
+
+.row.open + .desc-row td {
+  background: linear-gradient(180deg, var(--row-open-start), var(--row-open-end));
+  border-bottom-color: transparent;
+}
+
+.desc-text {
+  max-width: none;
+}
+
+.desc-text a {
+  color: var(--accent-deep);
+}
+
+.desc-text a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-underline);
+  text-underline-offset: 0.2em;
+}
+
 .expand-row {
   display: none;
 }
 
+.row.open + .desc-row + .expand-row,
 .row.open + .expand-row {
   display: table-row;
+}
+
+.desc-row:not([hidden]) + .expand-row .expand-desc {
+  display: none;
 }
 
 .expand-row td {
@@ -993,7 +1050,7 @@ th[data-sort].sort-asc::after {
   background: var(--accent-soft);
   color: var(--accent-deep);
   padding: 0.14rem 0.48rem;
-  font-size: 0.6rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -1426,8 +1483,8 @@ th[data-sort].sort-asc::after {
 
 .footer-left {
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .footer-brand {
@@ -1561,7 +1618,7 @@ th[data-sort].sort-asc::after {
 
   .tag {
     padding: 0.38rem 0.65rem;
-    font-size: 0.65rem;
+    font-size: var(--text-xs);
   }
 
   .table-wrap {

@@ -118,6 +118,84 @@ def build_robots_txt() -> str:
     return f"User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: {SITEMAP_URL}\n"
 
 
+WEBSITE_ID = f"{SITE_URL}#website"
+ISPARTOF_WEBSITE = {"@type": "WebSite", "@id": WEBSITE_ID}
+
+
+def _website_node() -> dict:
+    return {
+        "@type": "WebSite",
+        "@id": WEBSITE_ID,
+        "name": "Awesome Python",
+        "url": SITE_URL,
+    }
+
+
+def _item_list_payload(entries: Sequence[TemplateEntry]) -> dict:
+    return {
+        "@type": "ItemList",
+        "numberOfItems": len(entries),
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i,
+                "name": entry["name"],
+                "url": entry["url"],
+            }
+            for i, entry in enumerate(entries, start=1)
+        ],
+    }
+
+
+def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: int) -> dict:
+    description = (
+        "An opinionated guide to the best Python frameworks, libraries, and tools. "
+        f"Explore {len(entries)} curated projects across {total_categories} categories, "
+        "from AI and agents to data science and web development."
+    )
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            _website_node(),
+            {
+                "@type": "CollectionPage",
+                "@id": SITE_URL,
+                "name": "Awesome Python",
+                "url": SITE_URL,
+                "description": description,
+                "isPartOf": ISPARTOF_WEBSITE,
+                "mainEntity": _item_list_payload(entries),
+            },
+        ],
+    }
+
+
+def category_meta_description(name: str, entry_count: int, description: str) -> str:
+    count_sentence = f"Explore {entry_count} curated Python projects in {name}."
+    if description:
+        lead = description if description.endswith((".", "!", "?")) else f"{description}."
+        return f"{lead} {count_sentence}"
+    return f"{count_sentence} Part of the Awesome Python catalog."
+
+
+def build_category_json_ld(name: str, url: str, description: str, entries: Sequence[TemplateEntry]) -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            _website_node(),
+            {
+                "@type": "CollectionPage",
+                "@id": url,
+                "name": f"{name} Python Libraries",
+                "url": url,
+                "description": description,
+                "isPartOf": ISPARTOF_WEBSITE,
+                "mainEntity": _item_list_payload(entries),
+            },
+        ],
+    }
+
+
 def category_path(category: ParsedSection) -> str:
     return f"/categories/{category['slug']}/"
 
@@ -378,6 +456,10 @@ def build(repo_root: Path) -> None:
     site_dir.mkdir(parents=True)
 
     filter_urls_json = json.dumps(filter_urls, sort_keys=True, ensure_ascii=False).replace("</", "<\\/")
+    homepage_json_ld = json.dumps(
+        build_homepage_json_ld(entries, len(categories)),
+        ensure_ascii=False,
+    ).replace("</", "<\\/")
 
     tpl_index = env.get_template("index.html")
     (site_dir / "index.html").write_text(
@@ -393,6 +475,7 @@ def build(repo_root: Path) -> None:
             category_urls=category_urls,
             filter_urls=filter_urls,
             filter_urls_json=filter_urls_json,
+            homepage_json_ld=homepage_json_ld,
         ),
         encoding="utf-8",
     )
@@ -411,10 +494,20 @@ def build(repo_root: Path) -> None:
         group_categories: Sequence[ParsedSection] | None = None,
     ) -> None:
         page_dir.mkdir(parents=True, exist_ok=True)
+        category_description = category_meta_description(
+            category["name"], len(entries), category["description"]
+        )
+        category_json_ld = json.dumps(
+            build_category_json_ld(
+                category["name"], category_url, category_description, entries
+            ),
+            ensure_ascii=False,
+        ).replace("</", "<\\/")
         (page_dir / "index.html").write_text(
             tpl_category.render(
                 category=category,
                 category_url=category_url,
+                category_description=category_description,
                 entries=entries,
                 total_categories=len(categories),
                 category_urls=category_urls,
@@ -423,6 +516,7 @@ def build(repo_root: Path) -> None:
                 filter_urls_json=filter_urls_json,
                 parent_category=parent_category,
                 group_categories=group_categories,
+                category_json_ld=category_json_ld,
             ),
             encoding="utf-8",
         )
