@@ -341,6 +341,10 @@ tags.forEach(function (tag) {
 
 if (filterClear) {
   filterClear.addEventListener("click", function () {
+    if (!isIndexPage()) {
+      window.location.href = "/";
+      return;
+    }
     activeFilter = null;
     applyFilters();
   });
@@ -349,6 +353,10 @@ if (filterClear) {
 const noResultsClear = document.querySelector(".no-results-clear");
 if (noResultsClear) {
   noResultsClear.addEventListener("click", function () {
+    if (!isIndexPage()) {
+      window.location.href = "/";
+      return;
+    }
     if (searchInput) searchInput.value = "";
     activeFilter = null;
     applyFilters();
@@ -451,10 +459,8 @@ if (backToTop) {
   ) {
     activeSort = { col: sort, order: order };
   }
-  if (isIndexPage()) {
-    const matched = urlToFilter[location.pathname];
-    if (matched) activeFilter = matched;
-  }
+  const matched = urlToFilter[location.pathname];
+  if (matched) activeFilter = matched;
   if (q || activeFilter || sort) {
     sortRows();
   }

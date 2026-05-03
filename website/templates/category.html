@@ -38,24 +38,58 @@
 </header>
 {% endblock %}
 {% block content %}
-<section class="results-section category-results" id="category-index">
+<script type="application/json" id="filter-urls">{{ filter_urls_json | safe }}</script>
+<section class="results-section" id="library-index">
   <div class="results-intro section-shell" data-reveal>
     <div>
-      <h2>Python Projects in {{ category.name }}</h2>
+      <h2>Search every project in one place</h2>
     </div>
     <p class="results-note">
-      Sorted by GitHub stars when available. Click any row for details.
+      Press <kbd>/</kbd> to search. Tap a tag to filter. Click any row for
+      details.
     </p>
   </div>
 
-  <h2 class="sr-only">{{ category.name }} results</h2>
+  <div class="controls section-shell" data-reveal>
+    <h2 class="sr-only">Search and filter</h2>
+    <div class="search-wrap">
+      <svg
+        class="search-icon"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input
+        type="search"
+        class="search"
+        placeholder="Search {{ entries | length }} projects in {{ category.name }}..."
+        aria-label="Search projects"
+      />
+    </div>
+    <div class="filter-bar" aria-live="polite">
+      <span>Filtering for <strong class="filter-value"></strong></span>
+      <button class="filter-clear" aria-label="Clear filter">
+        Clear filter
+      </button>
+    </div>
+  </div>
+
+  <h2 class="sr-only">Results</h2>
   <div
     class="table-wrap"
     tabindex="0"
     role="region"
-    aria-label="{{ category.name }} libraries table"
+    aria-label="Libraries table"
   >
-    <table class="table category-table">
+    <table class="table">
       <thead>
         <tr>
           <th class="col-num"><span class="sr-only">Row number</span></th>
@@ -69,7 +103,11 @@
             <button type="button" class="sort-btn">Last Commit</button>
           </th>
           <th class="col-cat">Tags</th>
-          <th class="col-arrow"><span class="sr-only">Details</span></th>
+          <th class="col-arrow">
+            <button class="back-to-top" aria-label="Back to top">
+              Top &uarr;
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -79,7 +117,7 @@
           data-tags="{{ entry.categories | join('||') }}{% if entry.subcategories %}||{{ entry.subcategories | map(attribute='value') | join('||') }}{% endif %}||{{ entry.groups | join('||') }}{% if entry.source_type == 'Built-in' %}||Built-in{% endif %}"
           tabindex="0"
           aria-expanded="false"
-          aria-controls="category-expand-{{ loop.index }}"
+          aria-controls="expand-{{ loop.index }}"
         >
           <td class="col-num">{{ loop.index }}</td>
           <td class="col-name">
@@ -145,7 +183,7 @@
           </td>
           <td class="col-arrow"><span class="arrow">&rarr;</span></td>
         </tr>
-        <tr class="expand-row" id="category-expand-{{ loop.index }}">
+        <tr class="expand-row" id="expand-{{ loop.index }}">
           <td></td>
           <td colspan="4">
             <div class="expand-content">
@@ -188,6 +226,14 @@
       </tbody>
     </table>
   </div>
+
+  <div class="no-results" hidden>
+    <p>No projects match your search or filter.</p>
+    <p class="no-results-hint">
+      Try a broader term, or
+      <button class="no-results-clear">browse all projects</button>.
+    </p>
+  </div>
 </section>
 
 <section class="final-cta" data-reveal>
@@ -203,7 +249,13 @@
         rel="noopener"
         >Submit a project</a
       >
-      <a href="/" class="hero-action hero-action-secondary">Browse all</a>
+      <a
+        href="https://github.com/vinta/awesome-python"
+        class="hero-action hero-action-secondary"
+        target="_blank"
+        rel="noopener"
+        >Star the repository</a
+      >
     </div>
   </div>
 </section>

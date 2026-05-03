@@ -430,7 +430,7 @@ kbd {
 .tag:focus-visible,
 .back-to-top:focus-visible,
 .no-results-clear:focus-visible,
-.category-table a:focus-visible,
+.table a:focus-visible,
 .footer a:focus-visible,
 .sort-btn:focus-visible {
   outline: 2px solid var(--accent);
@@ -496,19 +496,6 @@ kbd {
 
 .category-subtitle a:hover {
   text-decoration-color: oklch(100% 0 0 / 0.7);
-}
-
-.category-results {
-  padding-top: clamp(2.5rem, 5vw, 3.75rem);
-}
-
-.category-results .results-intro {
-  grid-template-columns: 1fr;
-  gap: 0.6rem;
-}
-
-.category-results .results-intro .results-note {
-  justify-self: start;
 }
 
 .sponsor-band {

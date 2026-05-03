@@ -302,7 +302,7 @@ class TestBuild:
         assert 'href="https://example.com/w1"' in category_html
         assert "A widget." in category_html
         assert 'href="https://github.com/owner/w2"' in category_html
-        assert '<table class="table category-table">' in category_html
+        assert '<table class="table">' in category_html
         assert "42" in category_html
         assert "2026-01-01T00:00:00+00:00" in category_html
 

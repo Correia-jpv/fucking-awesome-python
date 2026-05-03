@@ -339,6 +339,8 @@ def build(repo_root: Path) -> None:
         shutil.rmtree(site_dir)
     site_dir.mkdir(parents=True)
 
+    filter_urls_json = json.dumps(filter_urls, sort_keys=True, ensure_ascii=False).replace("</", "<\\/")
+
     tpl_index = env.get_template("index.html")
     (site_dir / "index.html").write_text(
         tpl_index.render(
@@ -351,7 +353,7 @@ def build(repo_root: Path) -> None:
             build_date=build_date.strftime("%B %d, %Y"),
             sponsors=sponsors,
             category_urls=category_urls,
-            filter_urls_json=json.dumps(filter_urls, sort_keys=True, ensure_ascii=False).replace("</", "<\\/"),
+            filter_urls_json=filter_urls_json,
         ),
         encoding="utf-8",
     )
@@ -371,6 +373,7 @@ def build(repo_root: Path) -> None:
                 page_kind="category",
                 category_urls=category_urls,
                 current_path=category_path(category),
+                filter_urls_json=filter_urls_json,
             ),
             encoding="utf-8",
         )
@@ -394,6 +397,7 @@ def build(repo_root: Path) -> None:
                 page_kind="group",
                 category_urls=category_urls,
                 current_path=group_path(group["slug"]),
+                filter_urls_json=filter_urls_json,
             ),
             encoding="utf-8",
         )
@@ -431,6 +435,7 @@ def build(repo_root: Path) -> None:
                         parent_category=category,
                         category_urls=category_urls,
                         current_path=subcategory_path(category["slug"], sub["slug"]),
+                        filter_urls_json=filter_urls_json,
                     ),
                     encoding="utf-8",
                 )
