@@ -171,8 +171,11 @@ def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: i
 
 
 def category_meta_description(name: str, entry_count: int, description: str) -> str:
-    suffix = description if description else "Part of the Awesome Python catalog."
-    return f"Explore {entry_count} curated Python projects in {name}. {suffix}"
+    count_sentence = f"Explore {entry_count} curated Python projects in {name}."
+    if description:
+        lead = description if description.endswith((".", "!", "?")) else f"{description}."
+        return f"{lead} {count_sentence}"
+    return f"{count_sentence} Part of the Awesome Python catalog."
 
 
 def build_category_json_ld(name: str, url: str, description: str, entries: Sequence[TemplateEntry]) -> dict:
@@ -504,6 +507,7 @@ def build(repo_root: Path) -> None:
             tpl_category.render(
                 category=category,
                 category_url=category_url,
+                category_description=category_description,
                 entries=entries,
                 total_categories=len(categories),
                 category_urls=category_urls,

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ category.name }} Python Libraries | Awesome Python{% endblock %}
-{% block description %}Explore {{ entries | length }} curated Python projects in {{ category.name }}. {% if category.description %}{{ category.description }}{% else %}Part of the Awesome Python catalog.{% endif %}{% endblock %}
+{% block description %}{{ category_description }}{% endblock %}
 {% block canonical_url %}{{ category_url }}{% endblock %}
 {% block alternate_links %}{% endblock %}
 {% block extra_head %}

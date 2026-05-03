@@ -269,7 +269,7 @@ class TestBuild:
         assert 'href="/categories/widgets/"' in index_html
         assert 'data-value="Widgets"' in index_html
         assert parser.title.strip() == "Widgets Python Libraries | Awesome Python"
-        assert parser.meta_by_name["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries. Also see awesome-widgets."
+        assert parser.meta_by_name["description"] == "Widget libraries. Also see awesome-widgets. Explore 2 curated Python projects in Widgets."
         assert parser.links_by_rel["canonical"] == "https://awesome-python.com/categories/widgets/"
         assert parser.meta_by_property["og:url"] == "https://awesome-python.com/categories/widgets/"
         assert '<link rel="alternate" type="text/markdown" href="/index.md" />' not in category_html
@@ -562,7 +562,7 @@ class TestBuild:
         assert collection["name"] == "Widgets Python Libraries"
         assert collection["@id"] == "https://awesome-python.com/categories/widgets/"
         assert collection["url"] == "https://awesome-python.com/categories/widgets/"
-        assert collection["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries."
+        assert collection["description"] == "Widget libraries. Explore 2 curated Python projects in Widgets."
         assert collection["isPartOf"] == {"@type": "WebSite", "@id": "https://awesome-python.com/#website"}
 
         item_list = collection["mainEntity"]
