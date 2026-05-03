@@ -169,9 +169,9 @@
           </td>
           <td class="col-cat">
             {% for subcat in entry.subcategories %}
-            <button class="tag{% if subcat.url == current_path %} active{% endif %}" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
+            <a class="tag{% if subcat.url == current_path %} active{% endif %}" href="{{ subcat.url }}" data-value="{{ subcat.value }}" data-url="{{ subcat.url }}">
               {{ subcat.name }}
-            </button>
+            </a>
             {% endfor %}
             {% for cat in entry.categories %}
             <a
@@ -184,22 +184,24 @@
             {% endfor %}
             {% if entry.groups %}
             {% set group_url = filter_urls[entry.groups[0]] %}
-            <button
+            <a
               class="tag tag-group{% if group_url == current_path %} active{% endif %}"
+              href="{{ group_url }}"
               data-value="{{ entry.groups[0] }}"
               data-url="{{ group_url }}"
             >
               {{ entry.groups[0] }}
-            </button>
+            </a>
             {% endif %}
             {% if entry.source_type == 'Built-in' %}
-            <button
+            <a
               class="tag tag-source{% if '/categories/built-in/' == current_path %} active{% endif %}"
+              href="/categories/built-in/"
               data-value="Built-in"
               data-url="/categories/built-in/"
             >
               Built-in
-            </button>
+            </a>
             {% endif %}
           </td>
           <td class="col-arrow"><span class="arrow">&rarr;</span></td>
