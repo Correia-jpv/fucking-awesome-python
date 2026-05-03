@@ -268,7 +268,7 @@ class TestBuild:
 
         assert 'href="/categories/widgets/"' in index_html
         assert 'data-value="Widgets"' in index_html
-        assert parser.title.strip() == "Widgets Python Libraries | Awesome Python"
+        assert parser.title.strip() == "Widgets Python Libraries - Awesome Python"
         assert parser.meta_by_name["description"] == "Widget libraries. Also see awesome-widgets. Explore 2 curated Python projects in Widgets."
         assert parser.links_by_rel["canonical"] == "https://awesome-python.com/categories/widgets/"
         assert parser.meta_by_property["og:url"] == "https://awesome-python.com/categories/widgets/"
