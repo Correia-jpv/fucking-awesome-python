@@ -23,16 +23,30 @@ dev = [
     "watchdog==6.0.0",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["website/tests"]
-pythonpath = ["website"]
-
-[tool.ruff]
-line-length = 200
-
 [tool.uv]
 exclude-newer = "3 days"
 no-build = true
 
 [tool.uv.pip]
 only-binary = [":all:"]
+
+[tool.ruff]
+line-length = 200
+
+[tool.ty.environment]
+python-version = "3.13"
+root = ["website"]
+
+[tool.ty.terminal]
+error-on-warning = true
+
+[tool.ty.rules]
+division-by-zero = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+possibly-unresolved-reference = "error"
+unused-ignore-comment = "error"
+
+[tool.pytest.ini_options]
+testpaths = ["website/tests"]
+pythonpath = ["website"]
