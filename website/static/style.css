@@ -508,7 +508,7 @@ kbd {
 }
 
 .category-results .results-intro .results-note {
-  justify-self: end;
+  justify-self: start;
 }
 
 .category-table .col-name {
