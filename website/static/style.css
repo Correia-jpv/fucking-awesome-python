@@ -1050,7 +1050,7 @@ th[data-sort].sort-asc::after {
   background: var(--accent-soft);
   color: var(--accent-deep);
   padding: 0.14rem 0.48rem;
-  font-size: 0.6rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -1618,7 +1618,7 @@ th[data-sort].sort-asc::after {
 
   .tag {
     padding: 0.38rem 0.65rem;
-    font-size: 0.65rem;
+    font-size: var(--text-xs);
   }
 
   .table-wrap {
