@@ -62,10 +62,10 @@ Each token below shows the OKLCH value (canonical, lives in `style.css`) followe
 
 Surfaces:
 
-- `--bg-page` `oklch(96.8% 0.018 80)` ≈ `#FBF3E7`. Cream/ivory canvas. The default page background.
+- `--bg-page` `oklch(96.8% 0.018 80)` ≈ `#FBF3E7`. Cream/ivory canvas, the body floor. The body uses a vertical gradient between `--bg-page-top` `oklch(95.2% 0.018 78)` ≈ `#F7EFE3`, `--bg-page` at 24rem, and `--bg-page-end` `oklch(98.4% 0.01 80)` ≈ `#FCF8F0`, with a soft radial highlight in the top-left corner.
 - `--bg-paper` `oklch(98.6% 0.01 80)` ≈ `#FEFAF3`. Warm white for the content shell.
 - `--bg-paper-strong` `oklch(95.7% 0.016 76)` ≈ `#F7F0E5`. Tinted paper for sponsor band, CTA backgrounds, static decoration.
-- `--hero-bg-start` `oklch(14% 0.03 32)` ≈ `#130503` to `--hero-bg-end` `oklch(28% 0.05 42)` ≈ `#3D2014`. Dark earthy hero gradient.
+- `--hero-bg-start` `oklch(14% 0.03 32)` ≈ `#130503` through `--hero-bg-mid` `oklch(19% 0.035 35)` ≈ `#22120B` to `--hero-bg-end` `oklch(28% 0.05 42)` ≈ `#3D2014`. Dark earthy hero gradient.
 - `--footer-bg` `oklch(16% 0.025 35)` ≈ `#170906`. Dark warm charcoal footer, part of the same system.
 
 Ink:
@@ -86,7 +86,7 @@ Rules:
 
 - Use OKLCH for any new color. Not HSL, not hex.
 - Accent tokens (`--accent`, `--accent-deep`, `--accent-soft`) are reserved for interactive elements. Clickable filter tags (`.tag`) correctly use `--accent-soft` background with `--accent-deep` text. Interactive link states (`.col-name > a:hover`, `.sponsor-link:hover`, `.hero-action-primary`, `.back-to-top`, CTAs) use accent tokens.
-- Non-interactive elements (inline code, `.source-badge`, static labels, decorative pills) must use `--ink-muted`, `--ink-soft`, or `--bg-paper-strong`. Never the accent. Users should not mistake static decoration for something clickable.
+- Non-interactive elements (inline code, `.source-badge`, static labels, decorative pills) must use ink tokens (`--ink`, `--ink-soft`, `--ink-muted`) on `--bg-paper-strong` or `--bg-paper`, never the accent. `.source-badge` uses `--ink-soft`; `.sponsorship-body code` uses `--ink`. Users should not mistake static decoration for something clickable.
 - Same role uses the same token everywhere. No one-off inline `color: oklch(...)` buried in a rule.
 
 Aversions:
@@ -140,9 +140,9 @@ Hard-won sizing rules (do not relax):
 Depth comes from **tonal layers**, not heavy shadows.
 
 - The page is a quiet warm canvas (`--bg-page`). The content shell is slightly brighter paper (`--bg-paper`). The sponsor band, CTA backgrounds, and inline decorative blocks step up to `--bg-paper-strong`.
-- The hero is the one place that uses real atmosphere: subtle grid, slow sheen, warm radial gradients on a dark earthy ground (`--hero-bg-start` → `--hero-bg-end`). The sheen and any other motion respect `prefers-reduced-motion`.
+- The hero is the one place that uses real atmosphere: subtle grid, slow sheen, warm radial gradients on a dark earthy ground (`--hero-bg-start` → `--hero-bg-mid` → `--hero-bg-end`). The sheen and any other motion respect `prefers-reduced-motion`.
 - The footer is a single tonal block in `--footer-bg`, no internal gradients.
-- Box shadows, when used at all, are 1px soft inset/outset for separation only. No drop-shadows-as-decoration.
+- Two depth treatments are allowed and only these two. The search input combines a 1px inset highlight (`--search-inset`) with a soft warm drop shadow (`--search-shadow`, intensified by `--search-focus-shadow` on focus). The primary CTA button (`.hero-action-primary`) carries a warm drop shadow for press affordance. Both shadows are soft, warm-tinted, and tied to interactive elements. No new drop shadows on cards, panels, rows, or static decoration.
 - No glassmorphism as default decoration.
 - No bounce or elastic easing. Real objects decelerate smoothly.
 
@@ -151,7 +151,7 @@ Depth comes from **tonal layers**, not heavy shadows.
 The shape language is overwhelmingly **pill on small, zero radius on large**.
 
 - **Pills** (`border-radius: 999px`) for tags, search, sponsor logo chip, source badges, back-to-top, and primary CTA buttons.
-- **`0.4rem`** is used in one expand-row callout. Do not introduce a tokenized radius scale. The project does not need one.
+- **`0.4rem`** is used in exactly one place: inline `<code>` inside `.sponsorship-body`. Do not introduce a tokenized radius scale. The project does not need one.
 - Containers use the page surface itself, not rounded panels. When a panel is needed, prefer pill on small chips and zero radius on large surfaces.
 - **No `border-left` or `border-right` greater than 1px as a colored accent stripe** on cards, list items, callouts, or alerts. Use a different structure.
 
@@ -160,13 +160,13 @@ The shape language is overwhelmingly **pill on small, zero radius on large**.
 The component vocabulary is small and table-led. Source of truth: `website/static/style.css`.
 
 - **Table-driven index** (the hero of the page). Sticky header, sortable columns, click-to-expand rows that indent under the Name column. Modeled on placestoread.xyz. Not a card grid.
-- **Filter tags** (`.tag`). `--accent-soft` background with `--accent-deep` text. Pill shape. Hover lifts border to `--tag-hover-border`. Active state uses the warm `--tag-active-start` → `--tag-active-end` gradient. Tag variants (`group`, `subcat`, `source`, `built-in`) inherit the base `.tag` style and differ only where a real difference is needed.
+- **Filter tags** (`.tag`). `--accent-soft` background with `--accent-deep` text. Pill shape. Hover swaps to `--highlight` background with `--tag-hover-border` border and ink text. Active state uses the warm `--tag-active-start` → `--tag-active-end` gradient with hero-ink text. Tag variants (`tag-group`, `tag-source`) inherit the base `.tag` style today and differ only at narrow widths (`tag-group` hides under 960px). Add a new variant only when a real visual difference is needed.
 - **Hero**. Magazine-cover headline, dark earthy ground, kicker and proof microcopy, primary CTA button using `--hero-btn-start` / `--hero-btn-end`. Subtle grid plus slow sheen. Respects `prefers-reduced-motion`.
 - **Sponsor band**. Sits in the README header on `--bg-paper-strong`. Editorial layout, not a logo wall. Sponsor links share the global accent treatment.
 - **CTA**. Warm `--cta-bg`, full-bleed within shell. The button itself uses accent tokens.
 - **Footer**. Dark warm charcoal, part of the same system. Footer links share the global hover and focus treatment.
 - **Search**. Pill input with `--search-inset` interior and `--search-focus-ring` focus ring. Focus shadow uses `--search-focus-shadow`.
-- **Source badge / inline code**. Static decoration on `--bg-paper-strong` with `--ink-muted` text. Never the accent.
+- **Source badge / inline code**. Static decoration on `--bg-paper-strong`. `.source-badge` uses `--ink-soft` text in pill shape; `.sponsorship-body code` uses `--ink` text with the lone `0.4rem` radius. Never the accent.
 
 Peer-consistency check (run before shipping any visual change):
 
@@ -206,8 +206,8 @@ The user actively tests `< 960px` and `< 680px`. Narrow screens must stay functi
 Run this audit after generating or modifying a screen. Failure on any item means revise before moving on.
 
 1. **Width caps.** Inspect every section, card, paragraph, table cell, expanded row, CTA, sponsor description, hero subcopy. Only `.section-shell` (`--shell-max: 84rem`) may cap width. Anything else with a `max-width` is wrong.
-2. **Accent reservation.** Grep the changed CSS for `--accent`, `--accent-deep`, `--accent-soft`. Each match must back an interactive element (link, button, focus ring, filter tag). Static decoration must use `--ink-muted`, `--ink-soft`, or `--bg-paper-strong`.
-3. **Shape language.** Containers are square or pill. Anything in the 4px-to-16px radius range is suspect. The lone `0.4rem` callout is the only allowed exception.
+2. **Accent reservation.** Grep the changed CSS for `--accent`, `--accent-deep`, `--accent-soft`. Each match must back an interactive element (link, button, focus ring, filter tag). Static decoration must use ink tokens (`--ink`, `--ink-soft`, `--ink-muted`) on `--bg-paper-strong` or `--bg-paper`.
+3. **Shape language.** Containers are square or pill. Anything in the 4px-to-16px radius range is suspect. The lone `0.4rem` on `.sponsorship-body code` is the only allowed exception.
 4. **Type sizes.** Confirm no rendered text falls below 12px. If a size feels small to a mid-senior reader on a 27-inch display, bump one step up. Never reduce an existing size.
 5. **Peer consistency.** Compare against the closest peer element (sibling link type, sibling tag variant, sibling label). Hover, focus, color token, and gutter must match unless there is a stated reason to differ.
 6. **Narrow viewport.** Run the `playwright-cli` skill at `< 960px` and `< 680px`. Sort affordance, filter chips, and sticky header must remain functional.
