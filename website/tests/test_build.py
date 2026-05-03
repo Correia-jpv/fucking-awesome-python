@@ -496,10 +496,12 @@ class TestBuild:
         assert set(graph) == {"WebSite", "CollectionPage"}
         assert graph["WebSite"]["url"] == "https://awesome-python.com/"
         assert graph["WebSite"]["name"] == "Awesome Python"
+        assert graph["WebSite"]["@id"] == "https://awesome-python.com/#website"
 
         collection = graph["CollectionPage"]
+        assert collection["@id"] == "https://awesome-python.com/"
         assert collection["url"] == "https://awesome-python.com/"
-        assert collection["isPartOf"]["@id"] == graph["WebSite"]["@id"]
+        assert collection["isPartOf"] == {"@type": "WebSite", "@id": graph["WebSite"]["@id"]}
         expected_description = f"An opinionated guide to the best Python frameworks, libraries, and tools. Explore {len(entries)} curated projects across {len(categories)} categories, from AI and agents to data science and web development."
         assert collection["description"] == expected_description
 
@@ -553,13 +555,17 @@ class TestBuild:
         data = json.loads(block)
 
         assert data["@context"] == "https://schema.org"
-        assert data["@type"] == "CollectionPage"
-        assert data["name"] == "Widgets Python Libraries"
-        assert data["url"] == "https://awesome-python.com/categories/widgets/"
-        assert data["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries."
-        assert data["isPartOf"] == {"@id": "https://awesome-python.com/#website"}
+        graph = {node["@type"]: node for node in data["@graph"]}
+        assert set(graph) == {"WebSite", "CollectionPage"}
+        assert graph["WebSite"]["@id"] == "https://awesome-python.com/#website"
+        collection = graph["CollectionPage"]
+        assert collection["name"] == "Widgets Python Libraries"
+        assert collection["@id"] == "https://awesome-python.com/categories/widgets/"
+        assert collection["url"] == "https://awesome-python.com/categories/widgets/"
+        assert collection["description"] == "Explore 2 curated Python projects in Widgets. Widget libraries."
+        assert collection["isPartOf"] == {"@type": "WebSite", "@id": "https://awesome-python.com/#website"}
 
-        item_list = data["mainEntity"]
+        item_list = collection["mainEntity"]
         assert item_list["@type"] == "ItemList"
         assert item_list["numberOfItems"] == 2
         names = {item["name"] for item in item_list["itemListElement"]}
@@ -595,10 +601,12 @@ class TestBuild:
         end = group_html.index("</script>", start)
         data = json.loads(group_html[start:end])
 
-        assert data["@type"] == "CollectionPage"
-        assert data["name"] == "AI & ML Python Libraries"
-        assert data["url"] == "https://awesome-python.com/categories/ai-ml/"
-        assert data["description"] == "Explore 1 curated Python projects in AI & ML. Part of the Awesome Python catalog."
+        graph = {node["@type"]: node for node in data["@graph"]}
+        collection = graph["CollectionPage"]
+        assert collection["name"] == "AI & ML Python Libraries"
+        assert collection["@id"] == "https://awesome-python.com/categories/ai-ml/"
+        assert collection["url"] == "https://awesome-python.com/categories/ai-ml/"
+        assert collection["description"] == "Explore 1 curated Python projects in AI & ML. Part of the Awesome Python catalog."
 
     def test_build_creates_subcategory_pages(self, tmp_path):
         readme = textwrap.dedent("""\

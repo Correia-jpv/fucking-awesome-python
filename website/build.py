@@ -119,6 +119,16 @@ def build_robots_txt() -> str:
 
 
 WEBSITE_ID = f"{SITE_URL}#website"
+ISPARTOF_WEBSITE = {"@type": "WebSite", "@id": WEBSITE_ID}
+
+
+def _website_node() -> dict:
+    return {
+        "@type": "WebSite",
+        "@id": WEBSITE_ID,
+        "name": "Awesome Python",
+        "url": SITE_URL,
+    }
 
 
 def _item_list_payload(entries: Sequence[TemplateEntry]) -> dict:
@@ -146,19 +156,14 @@ def build_homepage_json_ld(entries: Sequence[TemplateEntry], total_categories: i
     return {
         "@context": "https://schema.org",
         "@graph": [
-            {
-                "@type": "WebSite",
-                "@id": WEBSITE_ID,
-                "name": "Awesome Python",
-                "url": SITE_URL,
-            },
+            _website_node(),
             {
                 "@type": "CollectionPage",
-                "@id": f"{SITE_URL}#collectionpage",
+                "@id": SITE_URL,
                 "name": "Awesome Python",
                 "url": SITE_URL,
                 "description": description,
-                "isPartOf": {"@id": WEBSITE_ID},
+                "isPartOf": ISPARTOF_WEBSITE,
                 "mainEntity": _item_list_payload(entries),
             },
         ],
@@ -173,12 +178,18 @@ def category_meta_description(name: str, entry_count: int, description: str) -> 
 def build_category_json_ld(name: str, url: str, description: str, entries: Sequence[TemplateEntry]) -> dict:
     return {
         "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        "name": f"{name} Python Libraries",
-        "url": url,
-        "description": description,
-        "isPartOf": {"@id": WEBSITE_ID},
-        "mainEntity": _item_list_payload(entries),
+        "@graph": [
+            _website_node(),
+            {
+                "@type": "CollectionPage",
+                "@id": url,
+                "name": f"{name} Python Libraries",
+                "url": url,
+                "description": description,
+                "isPartOf": ISPARTOF_WEBSITE,
+                "mainEntity": _item_list_payload(entries),
+            },
+        ],
     }
 
 
