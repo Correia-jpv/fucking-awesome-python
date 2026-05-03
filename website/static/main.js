@@ -342,7 +342,7 @@ tags.forEach(function (tag) {
 if (filterClear) {
   filterClear.addEventListener("click", function () {
     if (!isIndexPage()) {
-      window.location.href = "/";
+      window.location.href = "/#library-index";
       return;
     }
     activeFilter = null;
